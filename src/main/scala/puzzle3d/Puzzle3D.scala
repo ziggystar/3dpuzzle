@@ -2,7 +2,7 @@ package puzzle3d
 
 import java.io.{FileWriter, File}
 import csp.{CNF, Literal, OneOf, BVar}
-
+import resource._
 /**
  * Created by thomas on 12/24/13.
  */
@@ -11,18 +11,20 @@ import csp.{CNF, Literal, OneOf, BVar}
 object Puzzle3D extends App{
   val prototypes: Seq[Piece] = Piece.prototypes
 
-  val height = 1
+  val height = 2
   val width = 5
   val depth = 5
 
   val goal = Piece.fromASCII(
     Seq(
-      """  ###
-        | ####
+      """#####
         |#####
-        |###
-        |###
-      """.stripMargin)
+        |#####
+      """,
+      """
+        |# # #
+      """
+    )
   )
 
   val locations: IndexedSeq[(Int, Int, Int)] = for{
@@ -34,7 +36,7 @@ object Puzzle3D extends App{
   val piecePlacements: Map[Piece, Iterable[Piece]] = prototypes.map(proto =>
     proto -> (for{
       rotated <- proto.allRotations
-      translated <- rotated.allTranslations(width-1,depth-1,height-1)
+      translated <- rotated.allTranslations(width-1,depth-1,height-1) if translated.blocks.subsetOf(goal.blocks)
   } yield translated))(collection.breakOut)
 
   //for each location the set of rotated, translated pieces
@@ -57,7 +59,7 @@ object Puzzle3D extends App{
   } yield pp -> BVar('placePiece, pp))(collection.breakOut)
 
   //true if location is occupied
-  val occupations: Map[(Int,Int,Int),BVar] = locations.map(l => l -> BVar('occupied,l))(collection.breakOut)
+  val occupations: Map[(Int,Int,Int),BVar] = goal.blocks.map(l => l -> BVar('occupied,l))(collection.breakOut)
 
   //piece is either unused or placed exactly one way
   val placePiece: Iterable[OneOf] = for{
