@@ -7,96 +7,51 @@ import java.io.{FileWriter, File}
  * Created by thomas on 12/24/13.
  */
 
-trait CNF {
-  def clauses: Set[Set[Literal]]
-}
-
-object CNF{
-  def dimacs(clauses: Set[Set[Literal]]): String = {
-    val varToIndex = clauses.flatten.map(_.variable).toSeq.distinct.zipWithIndex.toMap
-    val numVars = varToIndex.size
-    val clauseString = clauses.map{cl =>
-      (cl.map{
-        case Negation(v) => -(varToIndex(v) + 1)
-        case Plain(v) => varToIndex(v) + 1
-      }.toSeq :+ 0).mkString(" ")
-    }.mkString("\n")
-    f"p cnf ${numVars + 1} ${clauses.size}\n$clauseString"
-  }
-}
-
-case class OneOf(literals: Iterable[Literal]) extends CNF{
-  def clauses: Set[Set[Literal]] = literals.toSeq match{
-    case Seq() => error("requiring one of empty literal-set to be true would result in empty clause")
-    case Seq(x) => Set(Set(x))
-    case Seq(l1,l2) => Set(Set(l1.not,l2.not),Set(l1,l2))
-    case Seq(l1,l2,l3) => Set(Set(l1.not,l2.not,l3.not))
-    case xs =>
-      val (ls1,ls2) = xs.splitAt(xs.size/2)
-      val oo2: BVar = BVar('oneof, ls2)
-      val oo1: BVar = BVar('oneof, ls1)
-      OneOf(ls1 :+ oo1.not).clauses ++ OneOf(ls2 :+ oo2.not).clauses ++ OneOf(Seq(oo1.plain,oo2.plain)).clauses
-  }
-}
-
-case class BVar(name: Symbol, data: Any){
-  def not: Literal = Negation(this)
-  def plain: Literal = Plain(this)
-
-  override val hashCode: Int = (name,data).hashCode()
-}
-
-sealed trait Literal{
-  def variable: BVar
-  def sign: Boolean
-  def not: Literal
-}
-case class Negation(variable: BVar) extends Literal{
-  def sign: Boolean = false
-  def not: Literal = Plain(variable)
-}
-case class Plain(variable: BVar) extends Literal{
-  def sign: Boolean = true
-  def not: Literal = Negation(variable)
-}
 
 object Puzzle3D extends App{
+  val prototypes: Seq[Piece] = Piece.prototypes
 
-  val maxHeight = 0
+  val height = 1
+  val width = 5
+  val depth = 5
+
   val goal = Piece.fromASCII(
     Seq(
-      """# ##
-        |####
+      """  ###
+        | ####
+        |#####
+        |###
+        |###
       """.stripMargin)
   )
 
   val locations: IndexedSeq[(Int, Int, Int)] = for{
-    x <- 0 to 4
-    y <- 0 to 4
-    z <- 0 to maxHeight
+    x <- 0 until width
+    y <- 0 until depth
+    z <- 0 until height
   } yield (x,y,z)
 
-  val piecePlacements: Map[Piece, Iterable[Piece]] = Piece.prototypes.map(proto =>
+  val piecePlacements: Map[Piece, Iterable[Piece]] = prototypes.map(proto =>
     proto -> (for{
       rotated <- proto.allRotations
-      translated <- rotated.allTranslations(0 to 4,0 to 4,0 to maxHeight)
+      translated <- rotated.allTranslations(width-1,depth-1,height-1)
   } yield translated))(collection.breakOut)
 
   //for each location the set of rotated, translated pieces
   val occupiers: Map[(Int,Int,Int),Seq[(Piece,Piece)]] = (for{
-    proto <- Piece.prototypes
+    proto <- prototypes
     placed <- piecePlacements(proto)
     block <- placed.blocks
   } yield (block, (proto,placed))).groupBy(_._1).map{case (k,v) => k -> v.map(_._2)}
 
   //true if a piece (prototype) is used
   val enablePieceVars: Map[Piece,BVar] =
-    Piece.prototypes.map(p => p -> BVar('pieceUsed,p))(collection.breakOut)
+    prototypes.map(p => p -> BVar('pieceUsed,p))(collection.breakOut)
 
   //keys: first is prototype, second is placement of prototype
   //bvar is true if prototype is placed this way
   val vPlacement: Map[(Piece,Piece),BVar] = (for {
-    proto <- Piece.prototypes
+    proto <- prototypes
     place <- piecePlacements(proto)
     pp = (proto, place)
   } yield pp -> BVar('placePiece, pp))(collection.breakOut)
@@ -132,5 +87,6 @@ object Puzzle3D extends App{
     fos.write(encoding)
   }
 
-  println(f"placements:${piecePlacements.map{case (p,pls) => f"$p: ${pls.size}"}.mkString("\n")}")
+  import sys.process._
+  "relsat -#c puzzle.cnf" !
 }

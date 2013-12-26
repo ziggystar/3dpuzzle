@@ -30,13 +30,12 @@ case class Piece(blocks: Set[(Int,Int,Int)]){
     z <- 0 to 3
   } yield rotate(x, y, z).normalize)(collection.breakOut)
 
-  def allTranslations(rx: Range, ry: Range, rz: Range): IndexedSeq[Piece] = {
-    require(rx.step == 1 && ry.step == 1 && rz.step == 1, "need continuous ranges")
-    require(Seq(rx,ry,rz).forall(r => r.start <= r.end), "ranges need to be ascending")
+  /** inclusive, thus allTranslations(0,0,0) uses only block (0,0,0). */
+  def allTranslations(rx: Int, ry: Int, rz: Int): IndexedSeq[Piece] = {
     for{
-      tx <- (rx.start - minX) to (rx.end - maxX)
-      ty <- (ry.start - minX) to (ry.end - maxX)
-      tz <- (rz.start - minX) to (rz.end - maxX)
+      tx <- -minX to (rx - maxX)
+      ty <- -minY to (ry - maxY)
+      tz <- -minZ to (rz - maxZ)
     } yield translate(tx,ty,tz)
   }
 
@@ -49,6 +48,26 @@ case class Piece(blocks: Set[(Int,Int,Int)]){
   def maxX = blocks.map(_._1).max
   def maxY = blocks.map(_._2).max
   def maxZ = blocks.map(_._3).max
+
+  override def toString: String = {
+    blocks.toString + "\n" + CharMap(blocks.map(_ -> '#')(collection.breakOut)).toString
+  }
+}
+
+case class CharMap(m: Map[(Int,Int,Int),Char]){
+  override def toString: String = {
+    val stepX = m.keys.map(_._1).max + 2
+    val maxX = (m.keys.map(_._3).max + 1) * stepX - 2
+    val maxY = m.keys.map(_._2).max
+
+    def makeLine(y: Int): String = (0 to maxX).map{
+      case x if x % stepX == stepX - 1 => '|'
+      case x if m.contains((x % stepX,y,x/stepX)) => m((x % stepX,y,x/stepX))
+      case _ => '.'
+    }.mkString
+
+    (0 to maxY).map(makeLine).mkString("\n")
+  }
 }
 
 object Piece{
@@ -75,7 +94,11 @@ object Piece{
         |#  """),
     Seq(
       """##
-        |#  """)).map(fromASCII)
+        |#  """),
+    Seq(
+      """##
+        | ##""")
+  ).map(fromASCII)
 
   /** Create a piece from a sequence of layers. Each layer is a string, containing newlines to
     * separate rows.
