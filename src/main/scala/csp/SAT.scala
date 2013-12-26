@@ -5,16 +5,18 @@ trait CNF {
 }
 
 object CNF{
-  def dimacs(clauses: Set[Set[Literal]]): String = {
-    val varToIndex = clauses.flatten.map(_.variable).toSeq.distinct.zipWithIndex.toMap
+  def dimacs(clauses: Set[Set[Literal]]): (String,Map[Int,BVar]) = {
+    val varToIndex: Map[BVar, Int] =
+      clauses.flatten.map(_.variable).toSeq.distinct.zipWithIndex.toMap.mapValues(_ + 1)
     val numVars = varToIndex.size
     val clauseString = clauses.map{cl =>
       (cl.map{
-        case Negation(v) => -(varToIndex(v) + 1)
-        case Plain(v) => varToIndex(v) + 1
+        case Negation(v) => -varToIndex(v)
+        case Plain(v) => varToIndex(v)
       }.toSeq :+ 0).mkString(" ")
     }.mkString("\n")
-    f"p cnf $numVars ${clauses.size}\n$clauseString"
+    val encoding = f"p cnf $numVars ${clauses.size}\n$clauseString"
+    (encoding,varToIndex.map(_.swap))
   }
 }
 

@@ -1,7 +1,7 @@
-package csp
+package puzzle3d
 
-import puzzle3d.Piece
 import java.io.{FileWriter, File}
+import csp.{CNF, Literal, OneOf, BVar}
 
 /**
  * Created by thomas on 12/24/13.
@@ -78,7 +78,7 @@ object Puzzle3D extends App{
     case (loc,bv) if goal.blocks.contains(loc) => Set(bv.plain)
     case (loc,bv) if !goal.blocks.contains(loc) => Set(bv.not)
   }
-  val encoding = CNF.dimacs(placementClauses.toSet ++ occupationClauses.toSet ++ goalEncoding.toSet)
+  val (encoding,varmap) = CNF.dimacs(placementClauses.toSet ++ occupationClauses.toSet ++ goalEncoding.toSet)
   val cnfFile = new File("puzzle.cnf")
 
   import resource._
@@ -88,5 +88,22 @@ object Puzzle3D extends App{
   }
 
   import sys.process._
-  "relsat -#c puzzle.cnf" !
+  val relsatOutput = ("relsat -#c puzzle.cnf" !!).split("\n")
+  def getFirstSol(output: Seq[String]): Option[Array[Int]] = {
+    val FirstSolution = """Solution 1: (.*)""".r
+    output.collect{
+      case FirstSolution(xs) => Some(xs)
+      case _ => None
+    }.flatten.headOption.map(_.split(" ").map(_.toInt))
+  }
+  relsatOutput.find(_.startsWith("Number")).foreach(println)
+  getFirstSol(relsatOutput).foreach{sol =>
+    val varToPlacement: Map[BVar, (Piece, Piece)] = vPlacement.map(_.swap)
+    val trueVars: Array[BVar] = sol.map(varmap)
+    //retrieve used (and placed) pieces
+    val usedPieces: Array[Piece] = trueVars.collect(varToPlacement).map(_._2)
+    val cm = usedPieces.zipWithIndex.foldLeft(CharMap(Map())){case (cm,(p,idx)) => cm.addPiece(p,('A' + idx).toChar)}
+    println("First solution:")
+    println(cm)
+  }
 }

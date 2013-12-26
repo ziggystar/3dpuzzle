@@ -55,6 +55,7 @@ case class Piece(blocks: Set[(Int,Int,Int)]){
 }
 
 case class CharMap(m: Map[(Int,Int,Int),Char]){
+  def addPiece(p: Piece, c: Char): CharMap = CharMap(m ++ p.blocks.map(_ -> c))
   override def toString: String = {
     val stepX = m.keys.map(_._1).max + 2
     val maxX = (m.keys.map(_._3).max + 1) * stepX - 2
