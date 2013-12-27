@@ -1,25 +1,30 @@
 package csp
 
+import org.sat4j.specs._
+import org.sat4j.minisat.SolverFactory
+import org.sat4j.core.VecInt
+
 trait CNF {
   def clauses: Set[Set[Literal]]
 }
 
 object CNF{
-  def dimacs(clauses: Set[Set[Literal]]): (String,Map[Int,BVar]) = {
+  def toProblem(clauses: Set[Set[Literal]], solver: ISolver = SolverFactory.newDefault): (IProblem,Map[Int,BVar]) = {
     val varToIndex: Map[BVar, Int] =
       clauses.flatten.map(_.variable).toSeq.distinct.zipWithIndex.toMap.mapValues(_ + 1)
-    val numVars = varToIndex.size
-    val clauseString = clauses.map{cl =>
-      (cl.map{
-        case Negation(v) => -varToIndex(v)
-        case Plain(v) => varToIndex(v)
-      }.toSeq :+ 0).mkString(" ")
-    }.mkString("\n")
-    val encoding = f"p cnf $numVars ${clauses.size}\n$clauseString"
-    (encoding,varToIndex.map(_.swap))
+
+    def clauseToIvec(clause: Set[Literal]): IVecInt = new VecInt(clause.map{
+      case Negation(v) => -varToIndex(v)
+      case Plain(v) => varToIndex(v)
+    }(collection.breakOut):Array[Int])
+
+    solver.setExpectedNumberOfClauses(clauses.size)
+
+    clauses.map(clauseToIvec).foreach(solver.addClause)
+
+    (solver,varToIndex.map(_.swap))
   }
 }
-
 
 case class OneOf(literals: Iterable[Literal]) extends CNF{
   def oneOfNoNewVars(_ls: Iterable[Literal]): Set[Set[Literal]] = {

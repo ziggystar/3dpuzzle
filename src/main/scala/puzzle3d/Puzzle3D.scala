@@ -1,8 +1,7 @@
 package puzzle3d
 
-import java.io.{FileWriter, File}
 import csp.{CNF, Literal, OneOf, BVar}
-import resource._
+
 /**
  * Created by thomas on 12/24/13.
  */
@@ -59,7 +58,6 @@ object Puzzle3D {
       (location, vOccupied) <- occupations
     } yield OneOf(occupiers(location).map(pp => vPlacement(pp).plain) :+ vOccupied.not)
 
-
     val placementClauses: Iterable[Set[Literal]] = placePiece.flatMap(_.clauses)
     val occupationClauses: Iterable[Set[Literal]] = occupation.flatMap(_.clauses)
 
@@ -67,38 +65,28 @@ object Puzzle3D {
       case (loc, bv) if goal.blocks.contains(loc) => Set(bv.plain)
       case (loc, bv) if !goal.blocks.contains(loc) => Set(bv.not)
     }
-    val (encoding, varmap) = CNF.dimacs(placementClauses.toSet ++ occupationClauses.toSet ++ goalEncoding.toSet)
-    val cnfFile = new File("puzzle.cnf")
 
-    import resource._
+    val (solver, varmap) = CNF.toProblem(placementClauses.toSet ++ occupationClauses.toSet ++ goalEncoding.toSet)
 
-    for (fos <- managed(new FileWriter(cnfFile))) {
-      fos.write(encoding)
-    }
+    val model = if(solver.isSatisfiable)
+      Some(solver.model)
+    else None
 
-    import sys.process._
-    val relsatOutput = ("relsat -#c puzzle.cnf" !!).split("\n")
-    def getFirstSol(output: Seq[String]): Option[Array[Int]] = {
-      val FirstSolution = """Solution 1: (.*)""".r
-      output.collect {
-        case FirstSolution(xs) => Some(xs)
-        case _ => None
-      }.flatten.headOption.map(_.split(" ").map(_.toInt))
-    }
-    relsatOutput.find(_.startsWith("Number")).foreach(println)
-    getFirstSol(relsatOutput).foreach {
+    model.foreach {
       sol =>
         val varToPlacement: Map[BVar, (Piece, Piece)] = vPlacement.map(_.swap)
-        val trueVars: Array[BVar] = sol.map(varmap)
+        val trueVars: Array[BVar] = sol.filter(_ >= 0).map(varmap)
         //retrieve used (and placed) pieces
         val usedPieces: Array[Piece] = trueVars.collect(varToPlacement).map(_._2)
         val cm = usedPieces.zipWithIndex.foldLeft(CharMap(Map())) {
-          case (cm, (p, idx)) => cm.addPiece(p, ('A' + idx).toChar)
+          case (acc, (p, idx)) => acc.addPiece(p, ('A' + idx).toChar)
         }
         println("First solution:")
         println(cm)
     }
-    relsatOutput.find(_.contains("UNSAT")).foreach(_ => println("No solutions possible."))
-  }
 
+    if(!model.isDefined){
+      println("Not satisfiable.")
+    }
+  }
 }
