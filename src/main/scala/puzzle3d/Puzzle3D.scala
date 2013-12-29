@@ -1,18 +1,74 @@
 package puzzle3d
 
 import csp.{CNF, Literal, OneOf, BVar}
-
-/**
- * Created by thomas on 12/24/13.
- */
-
+import scopt.Read
+import java.io.{FileReader, File}
 
 object Puzzle3D {
+  implicit val pieceListReader: Read[Piece] = Read.reads(s => PieceParser.parseAll(PieceParser.piece,s).get)
+
+  case class Config(problems: Seq[Piece] = Seq(),
+                    prototypes: Seq[Piece] = Piece.prototypes,
+                    printSolverStats: Boolean = false)
+
+  val parser = new scopt.OptionParser[Config]("puzzle3d") {
+    head("puzzle3d", "1.0")
+    opt[Piece]('p', "problem") action { (x, c) =>
+      c.copy(problems = c.problems :+ x) } text("add a problem") valueName("<piece-description>")
+    opt[File]('f', "file") valueName("<file>") action { (x, c) =>
+      c.copy(problems = c.problems ++ PieceParser.parseAll(PieceParser.pieces,new FileReader(x)).get)
+    } text("read a list of problems from a file")
+    opt[Unit]('v',"verbose") action { (_, c) =>
+      c.copy(printSolverStats = true) } text("verbose is a flag")
+    note("some notes.\n")
+    help("help") text("prints this usage text")
+  }
+
+
   def main(args: Array[String]) {
-    val prototypes: Seq[Piece] = Piece.prototypes
+    val config = parser.parse(args,Config())
+    config.foreach(solveAll)
+  }
 
-    val goal = PieceParser.parse(PieceParser.piece, args(0)).get.normalize
+  def solveAll(config: Config): Unit = {
+    config.problems.foreach{ problem =>
+      val (sol,stats) = solveInstance(config,problem)
+      sol match {
+        case Some(s) =>
+          println("Solution found:")
+          println(prettyPrintSolution(s))
+        case None =>
+          println("No solution possible.")
+      }
+      if(config.printSolverStats){
+        println("Solver stats:")
+        stats.foreach{case (stat,num) => println(f"\t$stat: $num")}
+      }
+    }
+  }
 
+  def solveInstance(config: Config, goal: Piece): (Option[Set[Piece]], Map[String, Number]) = {
+    val prototypes: Seq[Piece] = config.prototypes
+    val (problemEncoding,varToPlacement) = constructSATProblem(goal, prototypes)
+    val (solver, varmap) = CNF.toProblem(problemEncoding)
+
+    val model: Option[Array[Int]] = Some(solver).filter(_.isSatisfiable).map(_.model)
+    val solution: Option[Set[Piece]] = model.map(_.filter(_ >= 0).map(varmap).collect(varToPlacement).toSet)
+    import collection.JavaConverters._
+    (solution,solver.getStat.asScala.toMap)
+  }
+
+  def prettyPrintSolution(sol: Set[Piece]): String = sol.zipWithIndex.foldLeft(CharMap(Map())) {
+    case (acc, (p, idx)) => acc.addPiece(p, ('A' + idx).toChar)
+  }.toString
+
+  /** Construct the SAT encoding of the problem, together with a mapping of boolean variables to the
+    * placed pieces.
+    * @param goal The blocks to fill with pieces.
+    * @param prototypes At most one of each prototype may be placed, rotated and translated.
+    * @return Encoding as set of clauses and a mapping from variables to placed pieces.
+    */
+  def constructSATProblem(goal: Piece, prototypes: Seq[Piece]): (Set[Set[Literal]],Map[BVar,Piece]) = {
     val height = goal.maxZ + 1
     val width = goal.maxX + 1
     val depth = goal.maxY + 1
@@ -66,27 +122,7 @@ object Puzzle3D {
       case (loc, bv) if !goal.blocks.contains(loc) => Set(bv.not)
     }
 
-    val (solver, varmap) = CNF.toProblem(placementClauses.toSet ++ occupationClauses.toSet ++ goalEncoding.toSet)
-
-    val model = if(solver.isSatisfiable)
-      Some(solver.model)
-    else None
-
-    model.foreach {
-      sol =>
-        val varToPlacement: Map[BVar, (Piece, Piece)] = vPlacement.map(_.swap)
-        val trueVars: Array[BVar] = sol.filter(_ >= 0).map(varmap)
-        //retrieve used (and placed) pieces
-        val usedPieces: Array[Piece] = trueVars.collect(varToPlacement).map(_._2)
-        val cm = usedPieces.zipWithIndex.foldLeft(CharMap(Map())) {
-          case (acc, (p, idx)) => acc.addPiece(p, ('A' + idx).toChar)
-        }
-        println("First solution:")
-        println(cm)
-    }
-
-    if(!model.isDefined){
-      println("Not satisfiable.")
-    }
+    val problemEncoding: Set[Set[Literal]] = placementClauses.toSet ++ occupationClauses.toSet ++ goalEncoding.toSet
+    (problemEncoding,vPlacement.map{case ((proto,placed),v) => v -> placed})
   }
 }

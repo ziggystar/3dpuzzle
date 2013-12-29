@@ -9,7 +9,7 @@ trait CNF {
 }
 
 object CNF{
-  def toProblem(clauses: Set[Set[Literal]], solver: ISolver = SolverFactory.newDefault): (IProblem,Map[Int,BVar]) = {
+  def toProblem(clauses: Set[Set[Literal]], solver: ISolver = SolverFactory.newDefault): (ISolver, Map[Int, BVar]) = {
     val varToIndex: Map[BVar, Int] =
       clauses.flatten.map(_.variable).toSeq.distinct.zipWithIndex.toMap.mapValues(_ + 1)
 
