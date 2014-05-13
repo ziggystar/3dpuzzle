@@ -1,5 +1,10 @@
 package scopt
 
+/**
+ * This is the scopt CLI library by eugene yokota taken from
+ * https://github.com/jstrachan/scopt
+ * under "Do whatever you like with it" license.
+ */
 import collection.mutable.{ListBuffer, ListMap}
 
 trait Read[A] {
