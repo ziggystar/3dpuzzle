@@ -68,6 +68,13 @@ object Piece {
     PieceParser.parseAll(PieceParser.pieces, reader).get
   }
 
+  /** The seven 2D tetraminos used in Tetris. */
+  lazy val prototypesTetris: Seq[Piece] = {
+    val reader = new InputStreamReader(this.getClass.getClassLoader.getResourceAsStream("pieceset-tetris.3d"))
+    PieceParser.parseAll(PieceParser.pieces, reader).get
+  }
+
+
   def fromFile(f: File): Seq[Piece] = {
     import resource._
     managed(new FileReader(f)).map(PieceParser.parseAll(PieceParser.pieces, _)).opt.map(_.getOrElse(List())).getOrElse(List())

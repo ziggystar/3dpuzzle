@@ -1,7 +1,6 @@
 package puzzle3d
 
 import org.specs2._
-import scala.util.parsing.combinator.Parsers
 import org.specs2.specification.Fragments
 
 /**
