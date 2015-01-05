@@ -3,48 +3,54 @@ package csp
 import org.sat4j.specs._
 import org.sat4j.minisat.SolverFactory
 import org.sat4j.core.VecInt
+import scala.collection.immutable.IndexedSeq
 import scala.collection.mutable
 
-trait CNF {
-  def clauses: Set[Set[Literal]]
+sealed trait Literal[A]{
+  def variable: A
+  def sign: Boolean
+  def not: Literal[A]
+}
+case class Negated[A](variable: A) extends Literal[A]{
+  def sign: Boolean = false
+  def not: Literal[A] = Plain(variable)
+}
+case class Plain[A](variable: A) extends Literal[A]{
+  def sign: Boolean = true
+  def not: Literal[A] = Negated(variable)
 }
 
-object CNF{
-  def toProblem(clauses: Set[Set[Literal]], solver: ISolver = SolverFactory.newDefault): (ISolver, Map[Int, BVar]) = {
-    val varToIndex: Map[BVar, Int] = clauses.flatten.zipWithIndex.map{case (k, v) => k.variable -> (v + 1)}(collection.breakOut)
+sealed trait Constraint[A]{
+  def variables: Set[A]
+}
 
-    val literalCache = new mutable.HashMap[Literal,Int]()
+case class OneOf[A](literals: Iterable[Literal[A]]) extends Constraint[A]{
+  def variables = literals.map(_.variable)(collection.breakOut)
+}
+case class AtLeastOne[A](literals: Iterable[Literal[A]]) extends Constraint[A]{
+  def variables = literals.map(_.variable)(collection.breakOut)
+}
 
-    def clauseToIvec(clause: Set[Literal]): IVecInt = new VecInt(clause.map{lit =>
-      literalCache.getOrElseUpdate(lit, lit match {
-        case Negation(v) => -varToIndex(v)
-        case Plain(v) => varToIndex(v)
-      })
+
+object CSP {
+  def solve[A](constraints: Iterable[Constraint[A]], solver: ISolver = SolverFactory.newDefault): (ISolver, Option[Set[A]]) = {
+    val allVars: IndexedSeq[A] = constraints.flatMap(_.variables).toSet.toIndexedSeq
+    val toVar: mutable.HashMap[A, Int] = allVars.zip(1 to allVars.size).map(identity)(collection.breakOut)
+
+    def literalsToIvec(lits: Iterable[Literal[A]]) = new VecInt(lits.map{
+      case Plain(a) => toVar(a)
+      case Negated(a) => -toVar(a)
     }(collection.breakOut): Array[Int])
 
-    solver.setExpectedNumberOfClauses(clauses.size)
-
-    clauses.foreach(cl => solver.addClause(clauseToIvec(cl)))
-
-    (solver,varToIndex.map(_.swap))
-  }
-}
-
-case class OneOf(literals: Iterable[Literal]) extends CNF{
-  def oneOfNoNewVars(literals: Iterable[Literal]): Set[Set[Literal]] = {
-    val indexedLiterals = literals.toIndexedSeq
-    val result = Set.newBuilder[Set[Literal]]
-    def allPairs(i: Int = 0, j: Int = 1): Unit = {
-      if(j < indexedLiterals.length){
-        result += Set(indexedLiterals(i).not,indexedLiterals(j).not)
-        allPairs(i,j+1)
-      } else if(i < indexedLiterals.length)
-        allPairs(i+1,i+2)
+    //add the constraints
+    constraints.foreach{
+      case OneOf(lits) => solver.addExactly(literalsToIvec(lits),1)
+      case AtLeastOne(lits) => solver.addClause(literalsToIvec(lits))
     }
-    allPairs()
-    result += indexedLiterals.toSet
-    result.result()
+
+    val solution = Some(solver).filter(_.isSatisfiable).map(_.model.filter(_ > 0).map(v => allVars(v-1)).toSet)
+    (solver,solution)
   }
-  def clauses: Set[Set[Literal]] = oneOfNoNewVars(literals)
 }
+
 

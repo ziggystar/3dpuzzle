@@ -1,6 +1,6 @@
 package puzzle3d
 
-import csp.{CNF, Literal, OneOf, BVar}
+import csp._
 import scopt.Read
 import java.io.{FileReader, File}
 
@@ -61,18 +61,23 @@ object Puzzle3D {
 
   def solveInstance(config: Config, goal: Piece): (Option[Set[Piece]], Map[String, Number]) = {
     val prototypes: Seq[Piece] = config.prototypes
-    val (problemEncoding,varToPlacement) = constructSATProblem(goal, prototypes, config)
-    val (solver, varmap) = CNF.toProblem(problemEncoding)
+    val problemEncoding = constructSATProblem(goal, prototypes, config)
+    val (solver, solution) = CSP.solve(problemEncoding)
 
-    val model: Option[Array[Int]] = Some(solver).filter(_.isSatisfiable).map(_.model)
-    val solution: Option[Set[Piece]] = model.map(_.filter(_ >= 0).map(varmap).collect(varToPlacement).toSet)
+    val decodedSolution = solution.map{_.collect{case Placed(_,p) => p}}
     import collection.JavaConverters._
-    (solution,solver.getStat.asScala.toMap)
+    (decodedSolution,solver.getStat.asScala.toMap)
   }
 
   def prettyPrintSolution(sol: Set[Piece]): String = sol.zipWithIndex.foldLeft(CharMap(Map())) {
     case (acc, (p, idx)) => acc.addPiece(p, ('A' + idx).toChar)
   }.toString
+  
+  sealed trait PuzzleBV
+  //true if a piece (prototype) is used
+  case class PieceUsed(proto: Piece) extends PuzzleBV
+  case class Placed(proto: Piece, placed: Piece) extends PuzzleBV
+  case class Occupied(loc: (Int,Int,Int)) extends PuzzleBV
 
   /** Construct the SAT encoding of the problem, together with a mapping of boolean variables to the
     * placed pieces.
@@ -80,7 +85,7 @@ object Puzzle3D {
     * @param prototypes At most one of each prototype may be placed, rotated and translated.
     * @return Encoding as set of clauses and a mapping from variables to placed pieces.
     */
-  def constructSATProblem(goal: Piece, prototypes: Seq[Piece], config: Config): (Set[Set[Literal]],Map[BVar,Piece]) = {
+  def constructSATProblem(goal: Piece, prototypes: Seq[Piece], config: Config): Iterable[Constraint[PuzzleBV]] = {
     val height = goal.maxZ + 1
     val width = goal.maxX + 1
     val depth = goal.maxY + 1
@@ -101,42 +106,36 @@ object Puzzle3D {
     }
 
     //true if a piece (prototype) is used
-    val enablePieceVars: Map[Piece, BVar] =
-      prototypes.map(p => p -> BVar('pieceUsed, p))(collection.breakOut)
+    val enablePieceVars: Map[Piece, PuzzleBV] =
+      prototypes.map(p => p -> PieceUsed(p))(collection.breakOut)
 
     //keys: first is prototype, second is placement of prototype
     //bvar is true if prototype is placed this way
-    lazy val vPlacement: Map[(Piece, Piece), BVar] = (for {
+    lazy val vPlacement: Map[(Piece, Piece), PuzzleBV] = (for {
       proto <- prototypes
       place <- piecePlacements(proto)
       pp = (proto, place)
-    } yield pp -> BVar('placePiece, pp))(collection.breakOut)
+    } yield pp -> Placed(pp._1,pp._2))(collection.breakOut)
 
     //true if location is occupied
-    lazy val occupations: Map[(Int, Int, Int), BVar] = goal.blocks.map(l => l -> BVar('occupied, l))(collection.breakOut)
+    lazy val occupations: Map[(Int, Int, Int), PuzzleBV] = goal.blocks.map(l => l -> Occupied(l))(collection.breakOut)
 
     //piece is either unused or placed exactly one way
-    lazy val placePiece: Iterable[OneOf] = for {
+    lazy val placePiece: Iterable[OneOf[PuzzleBV]] = for {
       (proto, enabled) <- enablePieceVars
       placements = piecePlacements(proto)
-    } yield OneOf(Set(enabled.not) ++ placements.map(pl => vPlacement(proto -> pl).plain))
+    } yield OneOf(Set(Negated(enabled)) ++ placements.map(pl => Plain(vPlacement(proto -> pl))))
 
     //location is either unoccupied or occupied by exactly one placed piece
-    lazy val occupation: Iterable[OneOf] = for {
+    lazy val occupation: Iterable[OneOf[PuzzleBV]] = for {
       (location, vOccupied) <- occupations
-    } yield OneOf(occupiers(location).map(pp => vPlacement(pp).plain) :+ vOccupied.not)
+    } yield OneOf(occupiers(location).map(pp => Plain(vPlacement(pp))) :+ Negated(vOccupied))
 
-    lazy val placementClauses: Iterable[Set[Literal]] = placePiece.flatMap(_.clauses)
-    lazy val occupationClauses: Iterable[Set[Literal]] = occupation.flatMap(_.clauses)
-
-    val goalEncoding: Iterable[Set[Literal]] = occupations.map {
-      case (loc, bv) if goal.blocks.contains(loc) => Set(bv.plain)
-      case (loc, bv) if !goal.blocks.contains(loc) => Set(bv.not)
+    val goalEncoding: Iterable[AtLeastOne[PuzzleBV]] = occupations.map {
+      case (loc, bv) if goal.blocks.contains(loc) => AtLeastOne(Set(Plain(bv)))
+      case (loc, bv) if !goal.blocks.contains(loc) => AtLeastOne[PuzzleBV](Set(Negated(bv)))
     }
 
-    val problemEncoding: Set[Set[Literal]] =  occupationClauses.toSet ++ goalEncoding.toSet ++
-      (if(config.multiplePlacement) Set() else placementClauses.toSet)
-
-    (problemEncoding,vPlacement.map{case ((proto,placed),v) => v -> placed})
+    occupation ++ goalEncoding ++ (if (config.multiplePlacement) Set() else placePiece)
   }
 }

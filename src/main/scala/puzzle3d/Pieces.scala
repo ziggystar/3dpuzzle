@@ -57,6 +57,10 @@ case class Piece(blocks: Set[(Int, Int, Int)]) {
 
   def maxZ = blocks.map(_._3).max
 
+  def height = maxY - minY
+  def width = maxX - minX
+  def depth = maxZ - minZ
+
   override def toString: String = {
     blocks.toString + "\n" + CharMap(blocks.map(_ -> '#')(collection.breakOut)).toString
   }
