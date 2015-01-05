@@ -64,6 +64,8 @@ case class Piece(blocks: Set[(Int, Int, Int)]) {
   override def toString: String = {
     blocks.toString + "\n" + CharMap(blocks.map(_ -> '#')(collection.breakOut)).toString
   }
+
+  override val hashCode: Int = blocks.hashCode
 }
 
 object Piece {
