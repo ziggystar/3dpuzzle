@@ -11,3 +11,5 @@ libraryDependencies += "org.specs2" %% "specs2" % "2.3.12"
 libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.4"
 
 libraryDependencies += "com.github.scopt" %% "scopt" % "3.2.0"
+
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2"
