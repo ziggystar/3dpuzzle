@@ -24,22 +24,29 @@ object Generator2D {
     (solution.map(_.map(fromPiece)), stats)
   }
 
+  def char2Bits(c: Char): Seq[Boolean] = Seq.iterate(c.toInt,8)(_ >> 1).map(b => (b & 1) == 1).reverse
+
+  def stringToBits(a: String): Seq[Boolean] = a.flatMap(char2Bits)
+
   def main(args: Array[String]) {
-    val gen: Distribution[Set[(Int, Int)]] = grow(n = 30 * 4 - 1).map(normalize)
+//    println("abc".map(char2Bits).mkString("\n"))
+//    println("abc".map(c => printf("%h\n",c.toInt)))
+//    sys.exit()
+    val gen: Distribution[Set[(Int, Int)]] = grow(n = 10 * 4 - 1).map(normalize)
 
-    println(gen.map(solve).map(_._2("decisions")).map(_.doubleValue).bucketedHist(10))
+    //println(gen.map(solve).map(_._1.isDefined).hist)
 
-    val p = gen.sample(1).head
+    gen.sample(10).foreach{p =>
+      println(pretty(Set(p)))
 
-    println(pretty(Set(p)))
+      val (solution: Option[Set[Set[(Int, Int)]]], stats) = solve(p)
 
-    val (solution: Option[Set[Set[(Int, Int)]]], stats) = solve(p)
+      println(solution.map(pretty).getOrElse("unsolvable"))
 
-    println(solution.map(pretty).getOrElse("no solution found"))
+      println()
 
-    println()
-
-    println(stats.mkString("\n"))
+      println(stats.mkString("\n"))
+    }
   }
 
   val seed = always(Set((0,0)))
