@@ -239,7 +239,7 @@ trait Distribution[A] {
 }
 
 object Distribution {
-  private val rand = new Random()
+  private val rand = Random.self
 
   def always[A](value: A) = new Distribution[A] {
     override def get = value
