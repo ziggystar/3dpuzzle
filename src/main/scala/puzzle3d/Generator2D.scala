@@ -62,7 +62,7 @@ object Generator2D {
 
       def printDebug(x: (Set[(Int, Int)], (Option[Set[Set[(Int, Int)]]], Map[String, Number]))): String = {
         x._2._1.map(pretty).getOrElse(pretty(Set(x._1)))
-equals()      }
+      }
 
       System.err.println(problems.map(printDebug).mkString("\n"))
     }
