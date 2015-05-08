@@ -16,6 +16,7 @@ object Puzzle3D {
 
   val parser = new scopt.OptionParser[Config]("puzzle3d") {
     head("puzzle3d", "1.0")
+    note("some notes.\n")
     opt[Piece]('p', "problem") action { (x, c) =>
       c.copy(problems = c.problems :+ x) } text "add a problem" valueName "<piece-description>"
     opt[File]('f', "file") valueName "<file>" action { (x, c) =>
@@ -31,8 +32,7 @@ object Puzzle3D {
       .text("allow placing the same piece multiple times")
     opt[Unit]('t', "tetris")
       .action( (_,c) => c.copy(multiplePlacement = true, prototypes = Piece.prototypesTetris))
-      .text("use the seven tetraminos from Tetris, also allow multiple placement")
-    note("some notes.\n")
+      .text("use the seven tetraminos from Tetris, also enables multiple placement")
     help("help") text "prints this usage text"
   }
 

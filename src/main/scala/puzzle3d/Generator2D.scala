@@ -1,8 +1,8 @@
 package puzzle3d
 
-import org.specs2.matcher.ContentMatchers
 import probability_monad.Distribution
 import Distribution._
+import puzzle3d.Puzzle3D.Config
 import scopt.OptionParser
 
 import scala.util.Random
@@ -13,7 +13,7 @@ import scala.util.Random
 object Generator2D {
   type Voxel = (Int,Int)
 
-  val tetrisPuzzleConfig = Puzzle3D.Config(prototypes = Piece.prototypesTetris, multiplePlacement = true)
+  val tetrisPuzzleConfig: Config = Puzzle3D.Config(prototypes = Piece.prototypesTetris, multiplePlacement = true)
   
   case class RunConfig(inputString: String = "", rngSeed: Option[Long] = None, nPieces: Int = 4)
   val cliParser = new OptionParser[RunConfig]("gen-tetris-challenge") {
