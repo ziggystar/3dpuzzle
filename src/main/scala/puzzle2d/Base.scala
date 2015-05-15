@@ -22,6 +22,8 @@ case class Shape(locations: Set[Location]){
     }
     Shape(this.translate(-xr,-yr).locations.map(rotn)).translate(xr,yr)
   }
+  /** Mirror along the y-axis. */
+  def flip: Shape = Shape(locations.map{case Location(x,y) => Location(-x,y)})
   def union(other: Shape): Shape = Shape(locations.union(other.locations))
 }
 
@@ -39,8 +41,30 @@ object Shape {
   }
 }
 
+/** An equivalence class for shapes. Allows rotation, translation and flipping. */
+class Piece(prototype: Shape){
+  /** The prototype rotated, flipped and normalized. */
+  val shapes: Set[Shape] = for{
+    flipped <- Set(prototype,prototype.flip)
+    rotated <- (0 to 3).map(flipped.rotateOrigin(_))
+  } yield rotated.normalize
+
+  val representative: Shape = shapes.head
+
+  override val hashCode: Int = shapes.hashCode()
+
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case other: Piece => other.shapes == shapes
+    case _ => false
+  }
+}
+
+object Piece{
+  def apply(s: Shape): Piece = new Piece(s)
+}
+
 /** A multi-set of pieces. */
-case class PieceSet(pieces: Map[Shape,Int]) {
+case class PieceSet(pieces: Map[Piece,Int]) {
   def toSeq = pieces.flatMap{case (s,count) => Seq.fill(count)(s)}
 }
 
@@ -50,14 +74,14 @@ case class Problem(goal: Shape, set: PieceSet, allowMultiPlacement: Boolean = fa
 }
 
 case class Solution(problem: Problem, placement: Seq[Shape]){
-  require(validate, "solution is not valid")
-  def validate: Boolean = {
+  require(isValid, "solution is not valid")
+  def isValid: Boolean = {
     val usedValidPieces = {
-      val used = placement.groupBy(identity)
+      val used = placement.map(Piece(_)).groupBy(identity)
       used.keySet.forall{case k => used(k).size <= problem.set.pieces(k)}
     }
     val noOverlap = placement.flatMap(_.locations).groupBy(identity).forall(_._2.size == 1)
-    val goalCovered = placement.reduce(_.union(_)).locations == problem.goal
+    val goalCovered = placement.reduce(_.union(_)).locations == problem.goal.locations
     usedValidPieces && goalCovered && noOverlap
   }
 
@@ -65,6 +89,17 @@ case class Solution(problem: Problem, placement: Seq[Shape]){
 }
 
 object Solver2D{
-  def solve(problem: Problem): Option[Solution] = ???
+  def solve(problem: Problem): Option[Solution] = {
+    import puzzle3d.{Piece => P3D}
+    def shape2Piece(s: Shape) = P3D(s.locations.map{case Location(x,y) => (x,y,0)})
+    def p3d2Shape(p: P3D) = Shape(p.blocks.map{case (x,y,z) if z == 0=> Location(x,y)})
+      .ensuring(_.locations.size == p.blocks.size, "3d to 2d shape conversion failed because blocks with z!=0 found")
+
+    val (solution, stats): (Option[Set[P3D]], Map[String, Number]) = puzzle3d.Puzzle3D.solveInstance(
+      puzzle3d.Puzzle3D.Config(Seq(), problem.set.toSeq.map(p => shape2Piece(p.representative))(collection.breakOut), problem.allowMultiPlacement,printSolverStats = false),
+      shape2Piece(problem.goal)
+    )
+    solution.map(pieceSet => Solution(problem,pieceSet.map(p3d2Shape)(collection.breakOut)))
+  }
 }
 
