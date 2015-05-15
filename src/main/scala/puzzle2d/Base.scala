@@ -1,6 +1,8 @@
 package puzzle2d
 
-case class Location(x: Int, y: Int)
+case class Location(x: Int, y: Int) {
+  def asTuple: (Int, Int) = (x,y)
+}
 case class Shape(locations: Set[Location]){
   def minX = locations.map(_.x).min
   def minY = locations.map(_.y).min
@@ -37,30 +39,32 @@ object Shape {
   }
 }
 
-/** A set of pieces, annotated with values of type `A`. */
-case class PieceSet[A](annotatedPieces: Seq[(Shape,A)])
+/** A multi-set of pieces. */
+case class PieceSet(pieces: Map[Shape,Int]) {
+  def toSeq = pieces.flatMap{case (s,count) => Seq.fill(count)(s)}
+}
 
 /** A problem consists of a [[PieceSet]] and a [[Shape]] that has to be filled. */
-case class Problem[A](goal: Shape, set: PieceSet[A], allowMultiPlacement: Boolean = false){
+case class Problem(goal: Shape, set: PieceSet, allowMultiPlacement: Boolean = false){
   require(!allowMultiPlacement, "multiple placement not implemented yet")
 }
 
-case class Solution[A](problem: Problem[A], placement: Seq[(Shape,A)]){
+case class Solution(problem: Problem, placement: Seq[Shape]){
   require(validate, "solution is not valid")
   def validate: Boolean = {
     val usedValidPieces = {
       val used = placement.groupBy(identity)
-      val provided = problem.set.annotatedPieces.groupBy(identity)
-      used.keySet.forall{case k => used(k).size <= provided(k).size}
+      used.keySet.forall{case k => used(k).size <= problem.set.pieces(k)}
     }
-    val goalCovered = placement.map(_._1).reduce(_.union(_)).locations == problem.goal
-    usedValidPieces && goalCovered
+    val noOverlap = placement.flatMap(_.locations).groupBy(identity).forall(_._2.size == 1)
+    val goalCovered = placement.reduce(_.union(_)).locations == problem.goal
+    usedValidPieces && goalCovered && noOverlap
   }
 
-  def prettyPrint: String = ???
+  def prettyPrint: String = util.pretty(placement.map(_.locations.map(_.asTuple))(collection.breakOut))
 }
 
 object Solver2D{
-  def solve[A](problem: Problem[A]): Option[Solution[A]] = ???
+  def solve(problem: Problem): Option[Solution] = ???
 }
 
