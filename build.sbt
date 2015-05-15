@@ -13,3 +13,9 @@ libraryDependencies += "com.jsuereth" %% "scala-arm" % "1.4"
 libraryDependencies += "com.github.scopt" %% "scopt" % "3.2.0"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2"
+
+//for the gui
+libraryDependencies += "io.reactivex" % "rxscala_2.11" % "0.24.1"
+
+libraryDependencies += "org.scala-lang.modules" % "scala-swing_2.11" % "2.0.0-M2"
+
