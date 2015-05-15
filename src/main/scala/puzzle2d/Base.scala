@@ -28,6 +28,7 @@ case class Shape(locations: Set[Location]){
 }
 
 object Shape {
+  def empty: Shape = Shape(Set())
   /** Parse an ascii art of a shape.
     * @param s
     * @param blockChar Character used to denote occupied locations.
