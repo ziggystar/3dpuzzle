@@ -8,9 +8,9 @@ import scala.swing.{Label, Button, CheckBox}
 /**
  * Created by thomas on 19.05.15.
  */
-class RXCheckBox(msg: String = "") extends CheckBox(msg) {
+class RXCheckBox(msg: String = "") extends CheckBox(msg)  with RXComponent[Boolean]{
   private val enabledObsRaw = Subject[Boolean]()
-  val enabledObs = enabledObsRaw.distinctUntilChanged
+  val rxValue = enabledObsRaw.distinctUntilChanged
   selected = true
   this.listenTo(this)
   reactions += {
@@ -18,7 +18,7 @@ class RXCheckBox(msg: String = "") extends CheckBox(msg) {
   }
 }
 
-class RXIntValue(init: Int, minValue: Int = Integer.MIN_VALUE, maxValue: Int = Integer.MAX_VALUE) extends MigPanel("") {
+class RXIntValue(init: Int, minValue: Int = Integer.MIN_VALUE, maxValue: Int = Integer.MAX_VALUE) extends MigPanel("")  with RXComponent[Int]{
   private val decreaseButton = new RXButton("-")
   private val increaseButton = new RXButton("+")
   val rxValue: Observable[Int] = (Observable.just(init) ++ 
@@ -37,11 +37,15 @@ class RXLabel(value: Observable[String], initialValue: String = " ") extends Lab
   }
 }
 
-class RXButton(label: String) extends Button(label) {
+class RXButton(label: String) extends Button(label) with RXComponent[Unit]{
   private val pressSubject = Subject[Unit]()
   def rxValue: Observable[Unit] = pressSubject
   this.listenTo(this)
   this.reactions += {
     case ButtonClicked(src) if src == this => pressSubject.onNext(())
   }
+}
+
+trait RXComponent[T]{
+  def rxValue: Observable[T]
 }

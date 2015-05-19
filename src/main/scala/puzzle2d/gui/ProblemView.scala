@@ -1,7 +1,7 @@
 package puzzle2d.gui
 
 import java.awt.{Color, Dimension}
-import javax.swing.JFrame
+import javax.swing.{UIManager, JFrame}
 
 import puzzle2d._
 import rx.lang.scala.{Observable, Subject}
