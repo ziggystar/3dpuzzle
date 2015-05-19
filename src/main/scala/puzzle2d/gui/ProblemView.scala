@@ -4,10 +4,9 @@ import java.awt.{Color, Dimension}
 import javax.swing.JFrame
 
 import puzzle2d._
-import rx.lang.scala.{Subject, Observable}
-import rx.subjects.PublishSubject
+import rx.lang.scala.{Observable, Subject}
+import util.gui.{RXIntValue, RXButton, MigPanel, RXCheckBox}
 
-import scala.swing
 import scala.swing._
 
 /** Viewer for [[Shape]]. */
@@ -41,28 +40,21 @@ class ShapeView(val shape: Observable[Shape], val color: Observable[Color]) exte
 }
 
 class PieceToggler(val piece: Piece, val color: Color = Color.BLACK, initiallyEnabled: Boolean = true) extends MigPanel("") {
-  private val rawEnabled = Subject[Boolean]()
-  val pieceEnabled = rawEnabled.distinctUntilChanged
-
-
   this.peer.setAutoscrolls(true)
 
-  val toggler = new CheckBox{
-    selected = true
-  }
-  this.listenTo(toggler)
-  reactions += {
-    case e => rawEnabled.onNext(toggler.selected)
-  }
+  val toggler = new RXIntValue(1,minValue = 0)
+
   val preview = new ShapeView(Observable just piece.representative,
-      pieceEnabled.map{
-        case true => color
-        case false => Color.GRAY
+      toggler.rxValue.map{
+        case x if x > 0 => color
+        case _ => Color.GRAY
       }
   )
   this.add(preview)
   this.add(toggler)
 }
+
+
 
 class PieceSetView(val pieceSet: PieceSet) extends MigPanel("") {
   pieceSet.pieces.foreach{p =>

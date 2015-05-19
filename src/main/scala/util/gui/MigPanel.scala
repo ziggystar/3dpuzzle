@@ -1,4 +1,4 @@
-package puzzle2d.gui
+package util.gui
 
 import net.miginfocom.swing.MigLayout
 
