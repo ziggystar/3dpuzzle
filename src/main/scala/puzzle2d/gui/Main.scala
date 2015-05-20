@@ -4,7 +4,7 @@ import java.awt.Dimension
 import javax.swing.JFrame
 
 import puzzle2d._
-import util.gui.MigPanel
+import util.gui.{RXButton, MigPanel}
 
 import scala.swing._
 
@@ -17,8 +17,11 @@ object Main {
 
   def main (args: Array[String] ) {
     val pieces = new PieceSetView(set)
+    val solveButton = new RXButton("Solve")
     val root = new MigPanel(""){
+      add(solveButton,"wrap")
       add(pieces)
+      add(new Board(pieceSet = pieces.rxValue, solve = solveButton.rxValue),"push,grow")
     }
     val main = new MainFrame{
       title = "Puzzle 2D"

@@ -4,13 +4,17 @@ import java.awt.Color
 
 import puzzle2d.{PieceSet, Piece}
 import rx.lang.scala.Observable
-import util.gui.{RXIntValue, MigPanel}
+import util.gui.{RXComponent, RXIntValue, MigPanel}
 
 /** A view and an editor for a [[puzzle2d.PieceSet]]. */
-class PieceSetView(val pieceSet: PieceSet) extends MigPanel("") {
-  pieceSet.pieces.foreach{p =>
-    this.add(new PieceToggler(p._1), "wrap")
-  }
+class PieceSetView(val pieceSet: PieceSet) extends MigPanel("") with RXComponent[PieceSet]{
+  val pieceList = pieceSet.pieces.keys.toSeq
+  val togglers = pieceList.map(p => new PieceToggler(p))
+  togglers.foreach(this.add(_,"wrap"))
+
+  override def rxValue: Observable[PieceSet] = togglers.map(_.toggler.rxValue)
+      .foldLeft(Observable.just(Nil): Observable[List[Int]]){ case (oli, oi) =>
+        oli.combineLatestWith(oi)((l,i) => i :: l)}.map(li => PieceSet(pieceList.zip(li.reverse).toMap))
 }
 
 class PieceToggler(val piece: Piece, val color: Color = Color.BLACK, initiallyEnabled: Boolean = true) extends MigPanel("") {
