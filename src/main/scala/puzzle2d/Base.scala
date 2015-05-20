@@ -1,5 +1,8 @@
 package puzzle2d
 
+import org.sat4j.core.VecInt
+import org.sat4j.minisat.SolverFactory
+
 case class Location(x: Int, y: Int) {
   import util.Dir._
   def asTuple: (Int, Int) = (x,y)
@@ -16,6 +19,8 @@ case class Shape(locations: Set[Location]){
   def minY = locations.map(_.y).min
   def maxX = locations.map(_.x).max
   def maxY = locations.map(_.y).max
+  def width = maxX - minX + 1
+  def height = maxY - minY + 1
   def translate(x: Int, y: Int): Shape = Shape(locations.map{case Location(xx,yy) => Location(xx + x, yy + y)})
   def normalize: Shape = translate(-minX,-minY)
   /** Rotate this shape in 90° steps clockwise around the (the lower left corner of) point (xr,yr). */
@@ -33,7 +38,15 @@ case class Shape(locations: Set[Location]){
   /** Mirror along the y-axis. */
   def flip: Shape = Shape(locations.map{case Location(x,y) => Location(-x,y)})
   def union(other: Shape): Shape = Shape(locations.union(other.locations))
+  def isContainedIn(other: Shape): Boolean = this.locations.subsetOf(other.locations)
   def flip(l: Location) = if(locations(l)) Shape(locations - l) else Shape(locations + l)
+  def allTranslationsWithin(left: Int, bottom: Int, right: Int, top: Int): Iterable[Shape] = {
+    val n = normalize
+    for{
+      tx <- left to (right - width + 1)
+      ty <- bottom to (top - height + 1)
+    } yield n.translate(tx,ty)
+  }
 }
 
 object Shape {
@@ -110,6 +123,39 @@ object Solver2D{
       shape2Piece(problem.goal)
     )
     solution.map(pieceSet => Solution(problem,pieceSet.map(p3d2Shape)(collection.breakOut)))
+  }
+
+  sealed trait Var
+  case class Placed(prototype: Piece, place: Shape) extends Var
+  def newSolver(problem: Problem): Option[Solution] = {
+    val Problem(goal,pieceSet,multiPlacement) = problem
+    val solver = SolverFactory.newDefault()
+
+    val placements: IndexedSeq[Placed] = (for{
+      piece <- pieceSet.pieces.keys if pieceSet.pieces(piece) > 0
+      rotation <- piece.shapes
+      translation <- rotation.allTranslationsWithin(goal.minX,goal.minY,goal.maxX,goal.maxY) if translation isContainedIn goal
+    } yield Placed(piece,translation))(collection.breakOut)
+
+    //maps Placed objects to variable indices
+    val vars: Map[Placed, Int] = placements.zip(Stream.from(1)).toMap
+    val back: Map[Int,Placed] = vars.map(_.swap)
+
+    //every location has exactly one occupation
+    goal.locations.foreach{l =>
+      solver.addExactly(new VecInt(vars.collect{case (Placed(_,place),vi) if place.locations(l) => vi}(collection.breakOut): Array[Int]),1)
+    }
+
+    //use only the allowed number of pieces of each type
+    if(!multiPlacement){
+      pieceSet.pieces.foreach{case (piece,max) =>
+        solver.addAtMost(new VecInt(vars.collect{case (pl,vi) if pl.prototype == piece => vi}(collection.breakOut): Array[Int]), max)
+      }
+    }
+
+    Some(solver).filter(_.isSatisfiable).map{
+      _.model.filter(_ > 0).map(back).map(_.place)
+    }.map(Solution(problem,_))
   }
 }
 
