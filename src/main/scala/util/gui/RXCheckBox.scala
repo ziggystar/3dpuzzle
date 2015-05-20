@@ -5,8 +5,7 @@ import rx.lang.scala.{Observable, Subject}
 import scala.swing.event.ButtonClicked
 import scala.swing.{Label, Button, CheckBox}
 
-/**
- * Created by thomas on 19.05.15.
+/** A [[CheckBox]] with a label producing a boolean [[Observable]].
  */
 class RXCheckBox(msg: String = "") extends CheckBox(msg)  with RXComponent[Boolean]{
   private val enabledObsRaw = Subject[Boolean]()

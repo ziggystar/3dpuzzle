@@ -3,9 +3,7 @@ package puzzle3d
 import scala.collection.immutable.IndexedSeq
 import java.io.{InputStreamReader, FileReader, File}
 
-/**
- * Created by thomas on 12/24/13.
- */
+/** A set of 3d locations. */
 case class Piece(blocks: Set[(Int, Int, Int)]) {
   def rotate(nx: Int, ny: Int, nz: Int): Piece = {
     def rotx(block: (Int, Int, Int)) = block match {
@@ -65,7 +63,7 @@ case class Piece(blocks: Set[(Int, Int, Int)]) {
     blocks.toString + "\n" + CharMap(blocks.map(_ -> '#')(collection.breakOut)).toString
   }
 
-  override val hashCode: Int = blocks.hashCode
+  override val hashCode: Int = blocks.hashCode()
 }
 
 object Piece {

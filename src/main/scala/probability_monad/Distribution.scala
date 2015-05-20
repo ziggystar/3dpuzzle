@@ -456,7 +456,7 @@ object Distribution {
    */
   def chi2test[A, B](d: Distribution[(A, B)]): Double = {
     val data = d.histData
-    val total = data.map(_._2).sum
+    val total = data.values.sum
     val rowValues = data.map(_._1._1).toSet
     val colValues = data.map(_._1._2).toSet
 

@@ -50,11 +50,11 @@ class Board(val setShape: Observable[Shape] = Observable.empty, val solve: Obser
     b
   }
 
-  private val currentSolution: BehaviorSubject[Option[Solution]] = {
-    val r = BehaviorSubject[Option[Solution]](None)
-    (Observable.just[Option[Solution]](None) ++ solve.withLatestFrom(boardState.filterNot(_.locations.isEmpty) combineLatest pieceSet){
+  private val currentSolution: BehaviorSubject[Option[Problem#Solution]] = {
+    val r = BehaviorSubject[Option[Problem#Solution]](None)
+    (Observable.just[Option[Problem#Solution]](None) ++ solve.withLatestFrom(boardState.filterNot(_.locations.isEmpty) combineLatest pieceSet){
       case (_,(goal,pieces)) =>
-        Solver2D.newSolver(Problem(goal,pieces))
+        Problem(goal,pieces).solve
     }).subscribe(r)
     r
   }

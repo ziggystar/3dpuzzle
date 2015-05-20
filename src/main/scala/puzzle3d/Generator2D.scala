@@ -7,9 +7,7 @@ import scopt.OptionParser
 
 import scala.util.Random
 
-/**
- * Created by thomas on 04.01.15.
- */
+/** Generate 2d problems. */
 object Generator2D {
   type Voxel = (Int,Int)
 
@@ -80,7 +78,7 @@ object Generator2D {
     val xmax = vs.map(_._1).max
 
     val chars = for (y <- ymin to ymax)
-    yield (for (x <- xmin to xmax) yield (if(vs.contains((x,y))) '#' else ' '))
+    yield for (x <- xmin to xmax) yield if (vs.contains((x, y))) '#' else ' '
     chars.map(_.mkString).mkString("\n")
   }
 

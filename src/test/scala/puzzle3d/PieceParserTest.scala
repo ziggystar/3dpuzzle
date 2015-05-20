@@ -3,9 +3,7 @@ package puzzle3d
 import org.specs2._
 import org.specs2.specification.Fragments
 
-/**
- * Created by thomas on 12/26/13.
- */
+
 class PieceParserTest extends Specification with matcher.ParserMatchers {
   import PieceParser._
   val parsers = PieceParser
