@@ -1,7 +1,8 @@
 package puzzle2d.gui
 
-import java.awt.{Point, Color, Rectangle}
+import java.awt._
 
+import puzzle2d.Shape
 import puzzle2d._
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Subject, Observable}
@@ -51,15 +52,18 @@ class Board(val setShape: Observable[Shape] = Observable.empty, val solve: Obser
 
   private val currentSolution: BehaviorSubject[Option[Solution]] = {
     val r = BehaviorSubject[Option[Solution]](None)
-    (Observable.just[Option[Solution]](None) ++ solve.withLatestFrom(boardState zip pieceSet){
-      case (_,(goal,pieces)) => Solver2D.solve(Problem(goal,pieces))
+    (Observable.just[Option[Solution]](None) ++ solve.withLatestFrom(boardState.filterNot(_.locations.isEmpty) combineLatest pieceSet){
+      case (_,(goal,pieces)) =>
+        Solver2D.solve(Problem(goal,pieces))
     }).subscribe(r)
     r
   }
 
+  currentSolution.subscribe(_ => this.repaint())
+
   override def paint(g: Graphics2D): Unit = {
     val trans = Transformation(origin.getValue._1,origin.getValue._2,cellSize.getValue)
-    def drawPiece(s: Shape, c: Color): Unit = {
+    def drawPiece(s: Shape): Unit = {
       import util.Dir._
       def drawSide(l: Location, side: Dir): Unit = {
         val r = trans.locToScreen(l)
@@ -88,10 +92,9 @@ class Board(val setShape: Observable[Shape] = Observable.empty, val solve: Obser
       g.fillRect(scrRect.x,scrRect.y,scrRect.width,scrRect.height)
     }
     //draw solution
-//    println(currentSolution.getValue)
-//    currentSolution.getValue.foreach{s =>
-//      s.placement.foreach(drawPiece(_,Color.BLACK))
-//    }
+    g.setColor(Color.BLACK)
+    g.setStroke(new BasicStroke(2f))
+    currentSolution.getValue.foreach{s => s.placement.foreach(drawPiece)}
   }
 }
 

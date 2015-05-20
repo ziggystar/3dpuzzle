@@ -44,8 +44,8 @@ object CSP {
 
     //add the constraints
     constraints.foreach{
-      case OneOf(lits) => solver.addExactly(literalsToIvec(lits),1)
-      case AtLeastOne(lits) => solver.addClause(literalsToIvec(lits))
+      case OneOf(lits) => solver.addExactly(literalsToIvec(lits.toSet),1)
+      case AtLeastOne(lits) => solver.addClause(literalsToIvec(lits.toSet))
     }
 
     val solution = Some(solver).filter(_.isSatisfiable).map(_.model.filter(_ > 0).map(v => allVars(v-1)).toSet)

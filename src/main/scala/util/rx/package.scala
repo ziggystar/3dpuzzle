@@ -1,5 +1,6 @@
 package util
 
+import _root_.rx.lang.scala.Observable
 import _root_.rx.lang.scala.subjects.BehaviorSubject
 
 /** Helpers and pimps for rxscala. */
