@@ -3,6 +3,7 @@ package puzzle2d
 case class Location(x: Int, y: Int) {
   def asTuple: (Int, Int) = (x,y)
 }
+
 case class Shape(locations: Set[Location]){
   def minX = locations.map(_.x).min
   def minY = locations.map(_.y).min
