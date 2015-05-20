@@ -3,6 +3,8 @@ package puzzle2d
 import org.sat4j.core.VecInt
 import org.sat4j.minisat.SolverFactory
 
+import scala.util.Try
+
 /** A problem consists of a [[PieceSet]] and a [[Shape]] that has to be filled. */
 case class Problem(goal: Shape, set: PieceSet, allowMultiPlacement: Boolean = false){
   case class Solution(placement: Seq[Shape]){
@@ -23,32 +25,38 @@ case class Problem(goal: Shape, set: PieceSet, allowMultiPlacement: Boolean = fa
   case class Placed(prototype: Piece, place: Shape)
 
   def solve: Option[Solution] = {
-    val solver = SolverFactory.newDefault()
+    try {
+      val solver = SolverFactory.newDefault()
 
-    val placements: IndexedSeq[Placed] = (for{
-      piece <- set.pieces.keys if set.pieces(piece) > 0
-      rotation <- piece.shapes
-      translation <- rotation.allTranslationsWithin(goal.minX,goal.minY,goal.maxX,goal.maxY) if translation isContainedIn goal
-    } yield Placed(piece,translation))(collection.breakOut)
+      val placements: IndexedSeq[Placed] = (for {
+        piece <- set.pieces.keys if set.pieces(piece) > 0
+        rotation <- piece.shapes
+        translation <- rotation.allTranslationsWithin(goal.minX, goal.minY, goal.maxX, goal.maxY) if translation isContainedIn goal
+      } yield Placed(piece, translation))(collection.breakOut)
 
-    //maps Placed objects to variable indices
-    val vars: Map[Placed, Int] = placements.zip(Stream.from(1)).toMap
-    val back: Map[Int,Placed] = vars.map(_.swap)
+      //maps Placed objects to variable indices
+      val vars: Map[Placed, Int] = placements.zip(Stream.from(1)).toMap
+      val back: Map[Int, Placed] = vars.map(_.swap)
 
-    //every location has exactly one occupation
-    goal.locations.foreach{l =>
-      solver.addExactly(new VecInt(vars.collect{case (Placed(_,place),vi) if place.locations(l) => vi}(collection.breakOut): Array[Int]),1)
-    }
-
-    //use only the allowed number of pieces of each type
-    if(!allowMultiPlacement){
-      set.pieces.foreach{case (piece,max) =>
-        solver.addAtMost(new VecInt(vars.collect{case (pl,vi) if pl.prototype == piece => vi}(collection.breakOut): Array[Int]), max)
+      //every location has exactly one occupation
+      goal.locations.foreach { l =>
+        solver.addExactly(new VecInt(vars.collect { case (Placed(_, place), vi) if place.locations(l) => vi }(collection.breakOut): Array[Int]), 1)
       }
-    }
 
-    Some(solver).filter(_.isSatisfiable).map{
-      _.model.filter(_ > 0).map(back).map(_.place)
-    }.map(Solution(_))
+      //use only the allowed number of pieces of each type
+      if (!allowMultiPlacement) {
+        set.pieces.foreach { case (piece, max) =>
+          solver.addAtMost(new VecInt(vars.collect { case (pl, vi) if pl.prototype == piece => vi }(collection.breakOut): Array[Int]), max)
+        }
+      }
+
+      Some(solver).filter(_.isSatisfiable).map {
+        _.model.filter(_ > 0).map(back).map(_.place)
+      }.map(Solution(_))
+    } catch {
+      case e: Exception =>
+        System.err.println(e)
+        None
+    }
   }
 }

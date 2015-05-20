@@ -12,16 +12,28 @@ object Main {
   val set = PieceSet(Map(
     Piece(Shape.parseString("####")) -> 1,
     Piece(Shape.parseString("##\n##")) -> 1,
-    Piece(Shape.parseString("##\n ##")) -> 1
+    Piece(Shape.parseString("#\n###")) -> 1,
+    Piece(Shape.parseString("##\n ##")) -> 1,
+    Piece(Shape.parseString("###\n #")) -> 1
   ))
 
   def main (args: Array[String] ) {
-    val pieces = new PieceSetView(set)
     val solveButton = new RXButton("Solve")
+    val clearButton = new RXButton("Clear")
+    val toolbar = new ToolBar {
+      peer.setFloatable(false)
+    }
+    val pieces = new PieceSetView(set)
+    toolbar.contents ++= solveButton :: clearButton :: Nil
+
+    val board: Board = new Board(
+      pieceSet = pieces.rxValue,
+      setShape = clearButton.rxValue.map(_ => Shape.empty),
+      solve = solveButton.rxValue)
     val root = new MigPanel(""){
-      add(solveButton,"wrap")
+      add(toolbar, "span 2, growx,wrap")
       add(pieces)
-      add(new Board(pieceSet = pieces.rxValue, solve = solveButton.rxValue),"push,grow")
+      add(board,"push,grow")
     }
     val main = new MainFrame{
       title = "Puzzle 2D"

@@ -8,14 +8,16 @@ import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Subject, Observable}
 import util.rx._
 
-import scala.swing.event.MouseClicked
+import scala.swing.event.{MouseMoved, MouseClicked}
 import scala.swing.{Dimension, Graphics2D, Component}
 import rx.lang.scala.ExperimentalAPIs._
 
 /** A [[scala.swing.Component]] that allows viewing and editing a [[puzzle2d.Shape]].
   * It also allows overlaying a solution.
   */
-class Board(val setShape: Observable[Shape] = Observable.empty, val solve: Observable[Unit] = Observable.empty, pieceSet: Observable[PieceSet]) extends Component{
+class Board(val setShape: Observable[Shape] = Observable.empty,
+            val solve: Observable[Unit] = Observable.empty,
+            val pieceSet: Observable[PieceSet]) extends Component{
   minimumSize = new Dimension(200,200)
 
   case class Transformation(trX: Int, trY: Int, width: Int){
@@ -26,7 +28,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty, val solve: Obser
 
   private val origin: BehaviorSubject[(Int, Int)] = BehaviorSubject[(Int,Int)]((0,0))
   private val cellSize: BehaviorSubject[Int] = BehaviorSubject[Int](20)
-  private val transformation: Observable[Transformation] =
+  val transformation: Observable[Transformation] =
     origin.combineLatestWith(cellSize){case ((tx,ty),w) => Transformation(tx,ty,w)}
 
   private val screenClicks: Subject[Point] = Subject[Point]()
@@ -34,21 +36,20 @@ class Board(val setShape: Observable[Shape] = Observable.empty, val solve: Obser
   reactions += {
     case MouseClicked(src,point,_,1,false) if src == this => screenClicks.onNext(point)
   }
+  val clickLocations: Observable[Location] = screenClicks.withLatestFrom(transformation)((scr,tr) => tr.screenToLoc(scr.x,scr.y))
 
-  private val clickLocations = {
-    screenClicks.withLatestFrom(transformation)((scr,tr) => tr.screenToLoc(scr.x,scr.y))
+  private val mouseMoves: Subject[Point] = Subject[Point]()
+  this.listenTo(this.mouse.moves)
+  reactions += {
+    case MouseMoved(src, point, mods) => mouseMoves.onNext(point)
   }
 
   private val boardState: Observable[Shape] =
     (Observable.just(Shape.empty) ++ setShape).map(base => clickLocations.scan(base)(_.flip(_))).switch
 
-  boardState.subscribe(_ => repaint())
+  private val currentBoardState = boardState.manifest(Shape.empty)
 
-  private val currentBoardState: BehaviorSubject[Shape] = {
-    val b = BehaviorSubject[Shape](Shape.empty)
-    boardState.subscribe(b)
-    b
-  }
+  boardState.subscribe(_ => this.repaint())
 
   private val currentSolution: BehaviorSubject[Option[Problem#Solution]] = {
     val r = BehaviorSubject[Option[Problem#Solution]](None)
