@@ -14,6 +14,9 @@ libraryDependencies += "com.github.scopt" %% "scopt" % "3.2.0"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2"
 
+//json parsing
+libraryDependencies += "io.spray" % "spray-json_2.11" % "1.3.2"
+
 //for the gui
 libraryDependencies += "io.reactivex" % "rxscala_2.11" % "0.24.1"
 

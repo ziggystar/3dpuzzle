@@ -4,7 +4,7 @@ package puzzle2d
 class Piece(prototype: Shape){
   /** The prototype rotated, flipped and normalized. */
   val shapes: Set[Shape] = for{
-    flipped <- Set(prototype,prototype.flip)
+    flipped <- Set(prototype,prototype.mirror)
     rotated <- (0 to 3).map(flipped.rotateOrigin(_))
   } yield rotated.normalize
 

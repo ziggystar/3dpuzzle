@@ -8,7 +8,7 @@ import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Subject, Observable}
 import util.rx._
 
-import scala.swing.event.{MouseMoved, MouseClicked}
+import scala.swing.event._
 import scala.swing.{Dimension, Graphics2D, Component}
 import rx.lang.scala.ExperimentalAPIs._
 
@@ -31,25 +31,58 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   val transformation: Observable[Transformation] =
     origin.combineLatestWith(cellSize){case ((tx,ty),w) => Transformation(tx,ty,w)}
 
-  private val screenClicks: Subject[Point] = Subject[Point]()
+  private val mouseClicks: Subject[Point] = Subject[Point]()
   this.listenTo(this.mouse.clicks)
   reactions += {
-    case MouseClicked(src,point,_,1,false) if src == this => screenClicks.onNext(point)
+    case MouseClicked(src,point,_,1,false) if src == this => mouseClicks.onNext(point)
   }
-  val clickLocations: Observable[Location] = screenClicks.withLatestFrom(transformation)((scr,tr) => tr.screenToLoc(scr.x,scr.y))
+  val clickLocations: Observable[Location] = mouseClicks.withLatestFrom(transformation)((scr,tr) => tr.screenToLoc(scr.x,scr.y))
 
-  private val mouseMoves: Subject[Point] = Subject[Point]()
+  private val mouseMoves: Subject[MouseMoved] = Subject()
+  private val mousePressed: Subject[MousePressed] = Subject()
+  private val mouseReleased: Subject[MouseReleased] = Subject()
+  private val mouseDragged: Subject[MouseDragged] = Subject()
   this.listenTo(this.mouse.moves)
+  this.listenTo(this.mouse.clicks)
   reactions += {
-    case MouseMoved(src, point, mods) => mouseMoves.onNext(point)
+    case e: MouseMoved => mouseMoves.onNext(e)
+    case e: MousePressed => mousePressed.onNext(e)
+    case e: MouseReleased => mouseReleased.onNext(e)
+    case e: MouseDragged => mouseDragged.onNext(e)
+  }
+
+  def toLocation(me: Observable[MouseEvent]): Observable[Location] =
+    me.withLatestFrom(transformation)((e,t) => t.screenToLoc(e.point))
+
+  private val drags: Observable[Observable[MouseEvent]] = mousePressed.map(_ => mouseDragged.takeUntil(mouseReleased))
+
+  def applyDragsToShape(s: Shape, ds: Observable[Observable[Location]]): Observable[Shape] = {
+//    //add or delete depending on the first location of the drag
+//    def applyDrag(s: Shape, d: Observable[Location]): Observable[Shape] =
+//      d.first.flatMap{first =>
+//        d.scan(s)(if (!s.locations(first)) (_:Shape) + (_:Location) else (_:Shape) - (_:Location))
+//      }
+//    ds.scan(Observable.just(s)){case (in,drag) => in.last.flatMap{x => applyDrag(x,drag)}}.switch
+    val annotated = ds.flatMap(drag => drag zip Observable.from(Stream(true) ++ Stream.continually(false)))
+    annotated.scan((s,false)){
+      case ((os,mode),(l,true)) if os.locations(l)  => (os - l, false)
+      case ((os,mode),(l,true)) if !os.locations(l) => (os + l, true)
+      case ((os,false),(l,false)) => (os - l, false)
+      case ((os,true),(l,false)) => (os + l, true)
+    }.map(_._1)
   }
 
   private val boardState: Observable[Shape] =
-    (Observable.just(Shape.empty) ++ setShape).map(base => Observable.just(base) ++ clickLocations.scan(base)(_.flip(_))).switch
+    (Observable.just(Shape.empty) ++ setShape)
+      .switchMap(
+        base => Observable.just(base) ++
+          applyDragsToShape(base,drags.map(d => toLocation(d).distinctUntilChanged))
+      )
+
+  boardState.subscribe(_ => this.repaint())
 
   private val currentBoardState = boardState.manifest(Shape.empty)
 
-  boardState.subscribe(_ => this.repaint())
 
   private val currentSolution: BehaviorSubject[Option[Problem#Solution]] = {
     val r = BehaviorSubject[Option[Problem#Solution]](None)

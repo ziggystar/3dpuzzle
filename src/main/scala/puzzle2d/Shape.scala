@@ -22,10 +22,12 @@ case class Shape(locations: Set[Location]) {
     Shape(this.translate(-xr,-yr).locations.map(rotn)).translate(xr,yr)
   }
   /** Mirror along the y-axis. */
-  def flip: Shape = Shape(locations.map{case Location(x,y) => Location(-x,y)})
+  def mirror: Shape = Shape(locations.map{case Location(x,y) => Location(-x,y)})
   def union(other: Shape): Shape = Shape(locations.union(other.locations))
   def isContainedIn(other: Shape): Boolean = this.locations.subsetOf(other.locations)
   def flip(l: Location) = if(locations(l)) Shape(locations - l) else Shape(locations + l)
+  def +(l: Location): Shape = Shape(locations + l)
+  def -(l: Location): Shape = Shape(locations - l)
   def allTranslationsWithin(left: Int, bottom: Int, right: Int, top: Int): Iterable[Shape] = {
     val n = normalize
     for{
@@ -33,6 +35,8 @@ case class Shape(locations: Set[Location]) {
       ty <- bottom to (top - height + 1)
     } yield n.translate(tx,ty)
   }
+  override def toString: String =
+    (minY to maxY).map(y => (minX to maxX).map(x => if(locations(Location(x,y))) '#' else ' ')).mkString("\n")
 }
 
 object Shape {
