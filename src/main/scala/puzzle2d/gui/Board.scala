@@ -45,7 +45,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   }
 
   private val boardState: Observable[Shape] =
-    (Observable.just(Shape.empty) ++ setShape).map(base => clickLocations.scan(base)(_.flip(_))).switch
+    (Observable.just(Shape.empty) ++ setShape).map(base => Observable.just(base) ++ clickLocations.scan(base)(_.flip(_))).switch
 
   private val currentBoardState = boardState.manifest(Shape.empty)
 
