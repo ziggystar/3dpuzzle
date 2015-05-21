@@ -1,12 +1,12 @@
 {
     "piece-set" : [
-        { "piece" : "###" },
-        { "piece" : "####" },
-        { "piece" : "##\n#" },
-        { "piece" : "###\n#" },
-        { "piece" : "###\n #\n #" },
-        { "piece" : " # \n###\n #" },
-        { "piece" : "###\n# #" },
-        { "piece" : "##\n ##\n  #" }
+        { "piece" : "###", "count" : 6 },
+        { "piece" : "####", "count" : 6 },
+        { "piece" : "##\n#", "count" : 5 },
+        { "piece" : "###\n#", "count": 8 },
+        { "piece" : "###\n #\n #", "count" : 8 },
+        { "piece" : " # \n###\n #", "count" : 7 },
+        { "piece" : "###\n# #", "count" : 7 },
+        { "piece" : "##\n ##\n  #", "count" : 5 }
     ]
 }
