@@ -1,0 +1,16 @@
+{
+  "piece-set" : [
+    { "piece" : "##\n#", "count" : 1 },
+    { "piece" : "##\n #\n ##", "count" : 1 },
+    { "piece" : "###\n##", "count" : 1 },
+    { "piece" : "##", "count" : 1 },
+    { "piece" : "##\n##", "count" : 1 },
+    { "piece" : "###\n #", "count" : 1 },
+    { "piece" : "####", "count" : 1 },
+    { "piece" : "####\n #", "count" : 1 },
+    { "piece" : "###", "count" : 1 },
+    { "piece" : "###\n#", "count" : 1 },
+    { "piece" : "####\n#", "count" : 1 },
+    { "piece" : "##\n ##", "count" : 1 }
+  ]
+}
