@@ -54,15 +54,9 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   def toLocation(me: Observable[MouseEvent]): Observable[Location] =
     me.withLatestFrom(transformation)((e,t) => t.screenToLoc(e.point))
 
-  private val drags: Observable[Observable[MouseEvent]] = mousePressed.map(_ => mouseDragged.takeUntil(mouseReleased))
+  private val drags: Observable[Observable[MouseEvent]] = mousePressed.map(mp => Observable.just(mp) ++ mouseDragged.takeUntil(mouseReleased))
 
   def applyDragsToShape(s: Shape, ds: Observable[Observable[Location]]): Observable[Shape] = {
-//    //add or delete depending on the first location of the drag
-//    def applyDrag(s: Shape, d: Observable[Location]): Observable[Shape] =
-//      d.first.flatMap{first =>
-//        d.scan(s)(if (!s.locations(first)) (_:Shape) + (_:Location) else (_:Shape) - (_:Location))
-//      }
-//    ds.scan(Observable.just(s)){case (in,drag) => in.last.flatMap{x => applyDrag(x,drag)}}.switch
     val annotated = ds.flatMap(drag => drag zip Observable.from(Stream(true) ++ Stream.continually(false)))
     annotated.scan((s,false)){
       case ((os,mode),(l,true)) if os.locations(l)  => (os - l, false)
