@@ -16,6 +16,7 @@ object Main {
     implicit object JsonPiece extends JsonFormat[Piece] {
       override def read(json: JsValue): Piece = json match {
         case JsString(desc) => new Piece(Shape.parseString(desc, '#'))
+        case e => throw new DeserializationException(s"expected string, found $e")
       }
       override def write(p: Piece): JsValue = JsString(p.representative.toString)
     }
@@ -27,6 +28,7 @@ object Main {
 
       override def read(json: JsValue): PieceSet = json match {
         case JsArray(nps) => PieceSet(nps.map(_.convertTo[NumberedPiece]).map(np => np.piece  -> np.count)(collection.breakOut))
+        case e => throw new SerializationException(s"expected array of numbered pieces, found $e")
       }
     }
   }

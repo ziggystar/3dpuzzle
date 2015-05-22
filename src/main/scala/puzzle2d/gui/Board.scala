@@ -31,13 +31,6 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   val transformation: Observable[Transformation] =
     origin.combineLatestWith(cellSize){case ((tx,ty),w) => Transformation(tx,ty,w)}
 
-  private val mouseClicks: Subject[Point] = Subject[Point]()
-  this.listenTo(this.mouse.clicks)
-  reactions += {
-    case MouseClicked(src,point,_,1,false) if src == this => mouseClicks.onNext(point)
-  }
-  val clickLocations: Observable[Location] = mouseClicks.withLatestFrom(transformation)((scr,tr) => tr.screenToLoc(scr.x,scr.y))
-
   private val mouseMoves: Subject[MouseMoved] = Subject()
   private val mousePressed: Subject[MousePressed] = Subject()
   private val mouseReleased: Subject[MouseReleased] = Subject()
@@ -54,7 +47,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   def toLocation(me: Observable[MouseEvent]): Observable[Location] =
     me.withLatestFrom(transformation)((e,t) => t.screenToLoc(e.point))
 
-  private val drags: Observable[Observable[MouseEvent]] = mousePressed.map(mp => Observable.just(mp) ++ mouseDragged.takeUntil(mouseReleased))
+  val drags: Observable[Observable[MouseEvent]] = mousePressed.map(mp => Observable.just(mp) ++ mouseDragged.takeUntil(mouseReleased))
 
   def applyDragsToShape(s: Shape, ds: Observable[Observable[Location]]): Observable[Shape] = {
     val annotated = ds.flatMap(drag => drag zip Observable.from(Stream(true) ++ Stream.continually(false)))
@@ -66,28 +59,22 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
     }.map(_._1)
   }
 
-  private val boardState: Observable[Shape] =
+  val boardState: Observable[Shape] =
     (Observable.just(Shape.empty) ++ setShape)
       .switchMap(
         base => Observable.just(base) ++
           applyDragsToShape(base,drags.map(d => toLocation(d).distinctUntilChanged))
       )
 
+  val problem: Observable[Problem] = (boardState combineLatest pieceSet).map(sp => Problem(sp._1,sp._2))
+
+  val currentSolution: Observable[Option[Problem#Solution]] = problem.sample(solve).map(_.solve) merge problem.map(_ => None)
+
+  //used for drawing
   boardState.subscribe(_ => this.repaint())
-
   private val currentBoardState = boardState.manifest(Shape.empty)
-
-
-  private val currentSolution: BehaviorSubject[Option[Problem#Solution]] = {
-    val r = BehaviorSubject[Option[Problem#Solution]](None)
-    (Observable.just[Option[Problem#Solution]](None) ++ solve.withLatestFrom(boardState.filterNot(_.locations.isEmpty) combineLatest pieceSet){
-      case (_,(goal,pieces)) =>
-        Problem(goal,pieces).solve
-    }).subscribe(r)
-    r
-  }
-
   currentSolution.subscribe(_ => this.repaint())
+  private val solutionState = currentSolution.manifest(None)
 
   override def paint(g: Graphics2D): Unit = {
     val trans = Transformation(origin.getValue._1,origin.getValue._2,cellSize.getValue)
@@ -122,7 +109,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
     //draw solution
     g.setColor(Color.BLACK)
     g.setStroke(new BasicStroke(2f))
-    currentSolution.getValue.foreach{s => s.placement.foreach(drawPiece)}
+    solutionState.getValue.foreach{s => s.placement.foreach(drawPiece)}
   }
 }
 
