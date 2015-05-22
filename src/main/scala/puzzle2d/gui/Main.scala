@@ -50,7 +50,7 @@ object Main {
     val board: Board = new Board(
       pieceSet = pieces.rxValue,
       setShape = clearButton.rxValue.map(_ => Shape.empty),
-      solve = solveButton.rxValue)
+      solveTrigger = solveButton.rxValue)
     val root = new MigPanel(""){
       add(toolbar, "span 2, growx,wrap")
       add(pieces)

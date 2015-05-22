@@ -16,7 +16,7 @@ import rx.lang.scala.ExperimentalAPIs._
   * It also allows overlaying a solution.
   */
 class Board(val setShape: Observable[Shape] = Observable.empty,
-            val solve: Observable[Unit] = Observable.empty,
+            val solveTrigger: Observable[Unit] = Observable.empty,
             val pieceSet: Observable[PieceSet]) extends Component{
   minimumSize = new Dimension(200,200)
 
@@ -27,7 +27,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   }
 
   private val origin: BehaviorSubject[(Int, Int)] = BehaviorSubject[(Int,Int)]((0,0))
-  private val cellSize: BehaviorSubject[Int] = BehaviorSubject[Int](20)
+  private val cellSize: BehaviorSubject[Int] = BehaviorSubject[Int](30)
   val transformation: Observable[Transformation] =
     origin.combineLatestWith(cellSize){case ((tx,ty),w) => Transformation(tx,ty,w)}
 
@@ -66,9 +66,19 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
           applyDragsToShape(base,drags.map(d => toLocation(d).distinctUntilChanged))
       )
 
-  val problem: Observable[Problem] = (boardState combineLatest pieceSet).map(sp => Problem(sp._1,sp._2))
+  val problem: Observable[Problem] = boardState.combineLatestWith(pieceSet)(Problem(_,_))
 
-  val currentSolution: Observable[Option[Problem#Solution]] = problem.sample(solve).map(_.solve) merge problem.map(_ => None)
+  val currentSolution: Observable[Option[Problem#Solution]] = {
+    (problem.map(Right(_)) merge solveTrigger.map(Left(_))).scan((None: Option[Problem],None: Option[Problem#Solution])){
+      case ((None,_),Right(p)) => (Some(p),None)          //first problem arrives
+      case ((None,_),Left(())) => (None,None)             //uninitialized solve request
+      case ((Some(p),_),Right(pn)) => (Some(pn),None)     //update problem, discards solution
+      case (old@(Some(_),Some(_)),Left(())) => old        //redundant solve request
+      case ((Some(p),None),Left(())) => (Some(p),p.solve) //solve
+    }.map(_._2)
+  }
+  //the below code behaves oddly, bug in rx-java?
+  //problem.sample(solveTrigger).map(_.solve) merge problem.map(_ => None)
 
   //used for drawing
   boardState.subscribe(_ => this.repaint())
@@ -99,16 +109,19 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
     g.clearRect(clip.x,clip.y,clip.width,clip.height)
 
     //draw goal shape
-    g.setColor(Color.GRAY)
     for{
       loc <- currentBoardState.getValue.locations
       scrRect = trans.locToScreen(loc) if clip.intersects(scrRect)
     } {
+      g.setColor(Color.GRAY)
       g.fillRect(scrRect.x,scrRect.y,scrRect.width,scrRect.height)
+      g.setColor(g.getBackground)
+      g.drawRect(scrRect.x,scrRect.y,scrRect.width,scrRect.height)
     }
+
     //draw solution
     g.setColor(Color.BLACK)
-    g.setStroke(new BasicStroke(2f))
+    g.setStroke(new BasicStroke(3f))
     solutionState.getValue.foreach{s => s.placement.foreach(drawPiece)}
   }
 }

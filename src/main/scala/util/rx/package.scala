@@ -15,5 +15,6 @@ package object rx {
       obs.subscribe(x => last = x)
       def getValue: T = last
     }
+    def print(msg: String = ""): Unit = obs.subscribe(x => println(s"$msg$x"))
   }
 }

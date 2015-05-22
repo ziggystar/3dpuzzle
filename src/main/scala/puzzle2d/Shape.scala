@@ -1,12 +1,12 @@
 package puzzle2d
 
 case class Shape(locations: Set[Location]) {
-  def minX = locations.map(_.x).min
-  def minY = locations.map(_.y).min
-  def maxX = locations.map(_.x).max
-  def maxY = locations.map(_.y).max
-  def width = maxX - minX + 1
-  def height = maxY - minY + 1
+  def minX = (locations.map(_.x) + Integer.MAX_VALUE).min
+  def minY = (locations.map(_.y) + Integer.MAX_VALUE).min
+  def maxX = (locations.map(_.x) + Integer.MIN_VALUE).max
+  def maxY = (locations.map(_.y) + Integer.MIN_VALUE).max
+  def width = math.max(maxX - minX + 1,0)
+  def height = math.max(maxY - minY + 1,0)
   def translate(x: Int, y: Int): Shape = Shape(locations.map{case Location(xx,yy) => Location(xx + x, yy + y)})
   def normalize: Shape = translate(-minX,-minY)
   /** Rotate this shape in 90° steps clockwise around the (the lower left corner of) point (xr,yr). */
@@ -36,7 +36,7 @@ case class Shape(locations: Set[Location]) {
     } yield n.translate(tx,ty)
   }
   override def toString: String =
-    (minY to maxY).map(y => (minX to maxX).map(x => if(locations(Location(x,y))) '#' else ' ')).mkString("\n")
+    (minY to maxY).map(y => (minX to maxX).map(x => if(locations(Location(x,y))) '#' else ' ')(collection.breakOut): String).mkString("\n")
 }
 
 object Shape {
