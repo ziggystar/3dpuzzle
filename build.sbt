@@ -1,8 +1,11 @@
 name := "3dpuzzle"
 
-version := "1.0"
+/*
+2.0 : add the 2d puzzle GUI
+ */
+version := "2.0-devel"
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.6"
 
 libraryDependencies += "org.ow2.sat4j" % "org.ow2.sat4j.core" % "2.3.5"
 
