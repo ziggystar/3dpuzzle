@@ -4,6 +4,8 @@ import java.awt.Dimension
 import javax.swing.JFrame
 
 import puzzle2d._
+import rx.lang.scala.subjects.BehaviorSubject
+import rx.lang.scala.{Subject, Observable}
 import spray.json._
 import util.gui.{RXButton, MigPanel}
 
@@ -38,19 +40,32 @@ object Main {
     JsonParser(Source.fromInputStream(ClassLoader.getSystemResourceAsStream("puzzle2d/pieceset-kubix.json")).getLines().mkString("\n")).asJsObject.fields("piece-set").convertTo[PieceSet]
   }
 
+  case class Instance(name: String, problem: Problem)
+  object Instance {
+    def empty = Instance("empty", Problem.empty)
+  }
+
+  // Instances available for loading
+  val savedInstances = BehaviorSubject[Set[Instance]](Set[Instance]())
+  //trigger for setting instance
+  val setInstance: BehaviorSubject[Instance] = BehaviorSubject(Instance("default", Problem(Shape.empty, pieceSet)))
+
+  val actionSolve = ActionObs("Solve")
+  val actClearBoard = ActionObs("Clear")
+
   def main (args: Array[String] ) {
-    val solveButton = new RXButton("Solve")
-    val clearButton = new RXButton("Clear")
+    val solveButton = new Button(actionSolve)
+    val clearButton = new Button(actClearBoard)
     val toolbar = new ToolBar {
       peer.setFloatable(false)
     }
-    val pieces = new PieceSetView(pieceSet)
+    val pieces = new PieceSetView(setInstance.map(_.problem.set))
     toolbar.contents ++= solveButton :: clearButton :: Nil
 
     val board: Board = new Board(
       pieceSet = pieces.rxValue,
-      setShape = clearButton.rxValue.map(_ => Shape.empty),
-      solveTrigger = solveButton.rxValue)
+      setShape = actClearBoard.rxVale.map(_ => Shape.empty) merge setInstance.map(_.problem.goal),
+      solveTrigger = actionSolve.rxVale)
     val root = new MigPanel(""){
       add(toolbar, "span 2, growx,wrap")
       add(pieces)
@@ -64,4 +79,10 @@ object Main {
     main.peer.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
     main.open()
   }
+
 }
+
+
+
+
+

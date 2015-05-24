@@ -11,3 +11,7 @@ case class Location(x: Int, y: Int) {
     case Right => Location(x+1,y)
   }
 }
+
+object Location{
+  implicit def locOrd: Ordering[Location] = Ordering.by[Location,(Int,Int)](l => (l.x,l.y))
+}

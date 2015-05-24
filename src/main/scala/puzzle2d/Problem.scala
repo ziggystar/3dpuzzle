@@ -60,3 +60,7 @@ case class Problem(goal: Shape, set: PieceSet, allowMultiPlacement: Boolean = fa
     }
   }
 }
+
+object Problem {
+  val empty = Problem(Shape.empty, PieceSet(Map.empty))
+}
