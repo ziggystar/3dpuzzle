@@ -3,10 +3,8 @@ package puzzle2d
 import org.sat4j.core.VecInt
 import org.sat4j.minisat.SolverFactory
 
-import scala.util.Try
-
 /** A problem consists of a [[PieceSet]] and a [[Shape]] that has to be filled. */
-case class Problem(goal: Shape, set: PieceSet, allowMultiPlacement: Boolean = false){
+case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
   case class Solution(placement: Seq[Shape]){
     require(isValid, "solution is not valid")
     def isValid: Boolean = {
@@ -44,10 +42,8 @@ case class Problem(goal: Shape, set: PieceSet, allowMultiPlacement: Boolean = fa
       }
 
       //use only the allowed number of pieces of each type
-      if (!allowMultiPlacement) {
-        set.pieces.foreach { case (piece, max) =>
-          solver.addAtMost(new VecInt(vars.collect { case (pl, vi) if pl.prototype == piece => vi }(collection.breakOut): Array[Int]), max)
-        }
+      set.pieces.foreach { case (piece, max) =>
+        solver.addAtMost(new VecInt(vars.collect { case (pl, vi) if pl.prototype == piece => vi }(collection.breakOut): Array[Int]), max)
       }
 
       Some(solver).filter(_.isSatisfiable).map {
@@ -62,5 +58,5 @@ case class Problem(goal: Shape, set: PieceSet, allowMultiPlacement: Boolean = fa
 }
 
 object Problem {
-  val empty = Problem(Shape.empty, PieceSet(Map.empty))
+  val empty = Problem(Shape.empty, PieceSet(Map.empty), name = "empty")
 }

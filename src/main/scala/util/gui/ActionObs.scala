@@ -4,9 +4,7 @@ import rx.lang.scala.Subject
 
 import scala.swing.Action
 
-/**
- * Created by thomas on 24.05.15.
- */
+
 object ActionObs {
   def apply(name: String): ActionObs = new ActionObs(name)
 }
