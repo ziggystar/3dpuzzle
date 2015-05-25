@@ -24,8 +24,8 @@ object PuzzleJsonProtocol extends DefaultJsonProtocol {
   }
 
   implicit val jsonNumberedPiece: RootJsonFormat[NumberedPiece] = jsonFormat2(NumberedPiece)
-  implicit val jsonPieceSet = jsonFormat2(PieceSet(_:Map[Piece,Int],_:String))
-  implicit val jsonProblem = jsonFormat(Problem(_: Shape, _: PieceSet, _: String), "goal", "pieceset", "name")
+  implicit val jsonPieceSet: RootJsonFormat[PieceSet] = jsonFormat2(PieceSet(_:Map[Piece,Int],_:String))
+  implicit val jsonProblem: RootJsonFormat[Problem] = jsonFormat(Problem(_: Shape, _: PieceSet, _: String), "goal", "pieceset", "name")
 
   def shape2Json(s: Shape): String = s.toJson.prettyPrint
   def pieceSet2Json(ps: PieceSet): String = ps.toJson.prettyPrint
@@ -40,3 +40,5 @@ object PuzzleJsonProtocol extends DefaultJsonProtocol {
   def parse[T: JsonReader](is: InputStream): Try[T] =
     Try(JsonParser(Source.fromInputStream(is).getLines.mkString("\n")).convertTo[T])
 }
+
+case class Persisted[T: RootJsonFormat]()
