@@ -5,9 +5,8 @@ import javax.swing.JFrame
 
 import puzzle2d._
 import rx.lang.scala.subjects.BehaviorSubject
-import rx.lang.scala.{Subject, Observable}
 import spray.json._
-import util.gui.{RXButton, MigPanel}
+import util.gui.{ActionObs, MigPanel}
 
 import scala.io.Source
 import scala.swing._

@@ -1,5 +1,9 @@
 package util.gui
 
+import rx.lang.scala.Subject
+
+import scala.swing.Action
+
 /**
  * Created by thomas on 24.05.15.
  */
