@@ -66,19 +66,20 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
           applyDragsToShape(base,drags.map(d => toLocation(d).distinctUntilChanged))
       )
 
-  val problem: Observable[Problem] = boardState.combineLatestWith(pieceSet)(Problem(_,_))
+  val problem: Observable[Problem] = boardState.combineLatestWith(pieceSet)(Problem(_,_)).distinctUntilChanged
 
-  val currentSolution: Observable[Option[Problem#Solution]] = {
-    (problem.map(Right(_)) merge solveTrigger.map(Left(_))).scan((None: Option[Problem],None: Option[Problem#Solution])){
-      case ((None,_),Right(p)) => (Some(p),None)          //first problem arrives
-      case ((None,_),Left(())) => (None,None)             //uninitialized solve request
-      case ((Some(p),_),Right(pn)) => (Some(pn),None)     //update problem, discards solution
-      case (old@(Some(_),Some(_)),Left(())) => old        //redundant solve request
-      case ((Some(p),None),Left(())) => (Some(p),p.solve) //solve
-    }.map(_._2)
-  }
-  //the below code behaves oddly, bug in rx-java?
-  //problem.sample(solveTrigger).map(_.solve) merge problem.map(_ => None)
+  val currentSolution: Observable[Option[Problem#Solution]] =
+    solveTrigger.withLatestFrom(problem)((_,p) => p.solve) merge problem.map(_ => None)
+//  {
+//    (problem.map(Right(_)) merge solveTrigger.map(Left(_))).scan((None: Option[Problem],None: Option[Problem#Solution])){
+//      case ((None,_),Right(p)) => (Some(p),None)          //first problem arrives
+//      case ((None,_),Left(())) => (None,None)             //uninitialized solve request
+//      case ((Some(p),_),Right(pn)) => (Some(pn),None)     //update problem, discards solution
+//      case (old@(Some(_),Some(_)),Left(())) => old        //redundant solve request
+//      case ((Some(p),None),Left(())) => (Some(p),p.solve) //solve
+//    }.map(_._2)
+//  }
+
 
   //used for drawing
   boardState.subscribe(_ => this.repaint())
