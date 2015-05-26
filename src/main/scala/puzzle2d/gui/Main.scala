@@ -5,7 +5,7 @@ import java.io.File
 import puzzle2d._
 import util.rx._
 
-import java.awt.Dimension
+import java.awt.{ComponentOrientation, Dimension}
 import javax.swing.{JComponent, KeyStroke, JOptionPane, JFrame}
 
 import rx.lang.scala.{Subject, Observable}
@@ -59,7 +59,11 @@ object Main {
 
     val root = new MigPanel(""){
       add(toolbar, "span 2, growx,wrap")
-      add(pieces)
+      private val piecePane: ScrollPane = new ScrollPane(pieces){
+        verticalScrollBarPolicy = ScrollPane.BarPolicy.AsNeeded
+        horizontalScrollBarPolicy = ScrollPane.BarPolicy.Never
+      }
+      add(piecePane, "pushy,growy")
       add(board,"push,grow")
     }
 
