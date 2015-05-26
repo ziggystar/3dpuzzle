@@ -86,7 +86,9 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   currentSolution.subscribe(_ => this.repaint())
   private val solutionState = currentSolution.manifest(None)
 
-  override def paint(g: Graphics2D): Unit = {
+
+  override protected def paintComponent(g: Graphics2D): Unit = {
+
     val trans = Transformation(origin.getValue._1,origin.getValue._2,cellSize.getValue)
     def drawPiece(s: Shape): Unit = {
       import util.Dir._

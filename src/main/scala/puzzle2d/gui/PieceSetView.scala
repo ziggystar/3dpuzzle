@@ -17,6 +17,7 @@ class PieceSetView(pieceSet: Observable[PieceSet]) extends MigPanel("") with RXC
   togglers.subscribe{togglers =>
     this.contents.clear()
     togglers.foreach(this.add(_,"wrap"))
+    this.peer.revalidate()
   }
 
   override def rxValue: Observable[PieceSet] =
