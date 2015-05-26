@@ -11,6 +11,7 @@ import scala.collection.mutable
 /** A view and an editor for a [[puzzle2d.PieceSet]]. */
 class PieceSetView(pieceSet: Observable[PieceSet]) extends MigPanel("") with RXComponent[PieceSet]{
   val pieceList: Observable[Seq[(Piece, Int)]] = pieceSet.map(_.pieces.toSeq)
+
   val togglers: Observable[Seq[PieceToggler]] = pieceList.map(_.map{case (p,n) => new PieceToggler(p, initially = n)})
   //we simply add new components when the set changes...
   togglers.subscribe{togglers =>
