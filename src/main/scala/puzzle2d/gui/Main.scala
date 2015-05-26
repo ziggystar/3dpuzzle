@@ -6,7 +6,7 @@ import puzzle2d._
 import util.rx._
 
 import java.awt.Dimension
-import javax.swing.{JOptionPane, JFrame}
+import javax.swing.{JComponent, KeyStroke, JOptionPane, JFrame}
 
 import rx.lang.scala.{Subject, Observable}
 import rx.lang.scala.ExperimentalAPIs._
@@ -18,7 +18,7 @@ import scala.swing._
 object Main {
   import puzzle2d.json.PuzzleJsonProtocol._
   val pieceSets: Set[PieceSet] =
-    Set("puzzle2d/pieceset-kubix.json", "puzzle2d/pieceset-ubongo.json").map(f => parsePieceSet(ClassLoader.getSystemResourceAsStream(f)).get)
+    Set("puzzle2d/pieceset-kubix.json", "puzzle2d/pieceset-ubongo.json", "puzzle2d/pieceset-tetris.json").map(f => parsePieceSet(ClassLoader.getSystemResourceAsStream(f)).get)
 
   val instanceFile: File = {
     val f = new File(System.getProperty("user.home") + "/.2dpuzzle")
@@ -54,6 +54,9 @@ object Main {
       pieceSet = pieces.rxValue,
       setShape = actClearBoard.rxVale.map(_ => Shape.empty) merge selInstance.rxValue.map(_.goal),
       solveTrigger = actionSolve.rxVale)
+
+
+
     val root = new MigPanel(""){
       add(toolbar, "span 2, growx,wrap")
       add(pieces)
@@ -68,10 +71,19 @@ object Main {
       minimumSize = new Dimension(640,480)
       contents = root
     }
+
     main.peer.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
     main.open()
-  }
 
+    //add hotkeys
+    root.peer.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("F1"), "Solve")
+    root.peer.getActionMap.put("Solve", actionSolve.peer)
+    solveButton.tooltip = "F1"
+
+    root.peer.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("F2"), "Clear")
+    root.peer.getActionMap.put("Clear", actClearBoard.peer)
+    solveButton.tooltip = "F2"
+  }
 }
 
 
