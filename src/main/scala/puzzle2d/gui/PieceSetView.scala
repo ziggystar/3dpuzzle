@@ -2,26 +2,23 @@ package puzzle2d.gui
 
 import java.awt.Color
 
-import puzzle2d.{PieceSet, Piece}
+import puzzle2d.{Piece, PieceSet}
 import rx.lang.scala.Observable
-import util.gui.{RXComponent, RXIntValue, MigPanel}
-
-import scala.collection.mutable
+import util.gui.{MigPanel, RXComponent, RXIntValue}
 
 /** A view and an editor for a [[puzzle2d.PieceSet]]. */
 class PieceSetView(pieceSet: Observable[PieceSet]) extends MigPanel("") with RXComponent[PieceSet]{
-  val pieceList: Observable[Seq[(Piece, Int)]] = pieceSet.map(_.pieces.toSeq)
-
-  val togglers: Observable[Seq[PieceToggler]] = pieceList.map(_.map{case (p,n) => new PieceToggler(p, initially = n)})
+  val togglers: Observable[Iterable[PieceToggler]] = pieceSet.map(_.pieces.map{case (p,n) => new PieceToggler(p, initially = n)})
   //we simply add new components when the set changes...
-  togglers.subscribe{togglers =>
+  togglers.subscribe{ts =>
     this.contents.clear()
-    togglers.foreach(this.add(_,"wrap"))
+    ts.foreach(this.add(_,"wrap"))
     this.peer.revalidate()
   }
 
-  override def rxValue: Observable[PieceSet] =
-    togglers.flatMap(ts => Observable.combineLatest(ts.map(t => t.toggler.rxValue.map(t.piece -> _)))(tups => PieceSet(tups.toMap)))
+  //TODO this does not update properly
+  val rxValue: Observable[PieceSet] =
+    togglers.flatMap(ts => Observable.combineLatest(ts.map(t => t.toggler.rxValue.map(t.piece -> _)).toSeq)(tups => PieceSet(tups.toMap)))
 }
 
 class PieceToggler(val piece: Piece, val color: Color = Color.BLACK, initially: Int = 1) extends MigPanel("") {
