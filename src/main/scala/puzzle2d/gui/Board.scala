@@ -4,6 +4,8 @@ import java.awt._
 
 import puzzle2d.Shape
 import puzzle2d._
+import rx.Scheduler
+import rx.lang.scala.schedulers.NewThreadScheduler
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Subject, Observable}
 import util.rx._
@@ -69,17 +71,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   val problem: Observable[Problem] = boardState.combineLatestWith(pieceSet)(Problem(_,_)).distinctUntilChanged
 
   val currentSolution: Observable[Option[Problem#Solution]] =
-    solveTrigger.withLatestFrom(problem)((_,p) => p.solve) merge problem.map(_ => None)
-//  {
-//    (problem.map(Right(_)) merge solveTrigger.map(Left(_))).scan((None: Option[Problem],None: Option[Problem#Solution])){
-//      case ((None,_),Right(p)) => (Some(p),None)          //first problem arrives
-//      case ((None,_),Left(())) => (None,None)             //uninitialized solve request
-//      case ((Some(p),_),Right(pn)) => (Some(pn),None)     //update problem, discards solution
-//      case (old@(Some(_),Some(_)),Left(())) => old        //redundant solve request
-//      case ((Some(p),None),Left(())) => (Some(p),p.solve) //solve
-//    }.map(_._2)
-//  }
-
+    solveTrigger.observeOn(NewThreadScheduler()).withLatestFrom(problem)((_,p) => p.solve) merge problem.map(_ => None)
 
   //used for drawing
   boardState.subscribe(_ => this.repaint())
