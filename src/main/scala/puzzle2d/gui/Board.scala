@@ -30,13 +30,13 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   }
 
   object SolveState {
-    def attempt(p: Problem): SolveState = try {
-      p.solve(10).map(Solved(p,_)).getOrElse(Unsolvable(p,Shape.empty))
-    } catch {
-      case e: ContradictionException => Unsolvable(p,Shape.empty)
-      case r: TimeoutException => TimeOut(p)
+    def attempt(p: Problem): SolveState = p.solve(10) match {
+      case s: p.Solution => Solved(p, s)
+      case p.Timeout => TimeOut(p)
+      case p.Unsolvable => Unsolvable(p, Shape.empty)
     }
   }
+
   case class Unattempted(problem: Problem) extends SolveState
   case class Solved(problem: Problem, solution: Problem#Solution) extends SolveState
   case class Unsolvable(problem: Problem, contradiction: Shape) extends SolveState
@@ -95,7 +95,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
     (solveTrigger.withLatestFrom(problem){
       (_,p) =>
         Observable.just(Solving(p)) ++ Observable.from(Future.apply(SolveState.attempt(p)))
-    } merge problem.map(p => Observable.just(Unattempted(p)))).switch
+    }.cache merge problem.map(p => Observable.just(Unattempted(p)))).switch
 
   val lastSolutionState = solutionState.manifest(Unattempted(Problem.empty))
 

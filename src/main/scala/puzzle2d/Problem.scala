@@ -2,10 +2,14 @@ package puzzle2d
 
 import org.sat4j.core.VecInt
 import org.sat4j.minisat.SolverFactory
+import org.sat4j.specs.{TimeoutException, ContradictionException}
 
 /** A problem consists of a [[PieceSet]] and a [[Shape]] that has to be filled. */
 case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
-  case class Solution(placement: Seq[Shape]){
+  sealed trait Result
+  case object Timeout extends Result
+  case object Unsolvable extends Result
+  case class Solution(placement: Seq[Shape]) extends Result {
     require(isValid, "solution is not valid")
     def isValid: Boolean = {
       val usedValidPieces = {
@@ -22,7 +26,7 @@ case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
 
   case class Placed(prototype: Piece, place: Shape)
 
-  def solve(timeOut: Int = 10): Option[Solution] = {
+  def solve(timeOut: Int = 10): Result = {
     try {
       val solver = SolverFactory.newDefault()
 
@@ -50,11 +54,10 @@ case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
 
       Some(solver).filter(_.isSatisfiable).map {
         _.model.filter(_ > 0).map(back).map(_.place)
-      }.map(Solution(_))
+      }.map(Solution(_)).getOrElse(Unsolvable)
     } catch {
-      case e: Exception =>
-        System.err.println(e)
-        None
+      case e: TimeoutException => Timeout
+      case e: ContradictionException => Unsolvable
     }
   }
 }
