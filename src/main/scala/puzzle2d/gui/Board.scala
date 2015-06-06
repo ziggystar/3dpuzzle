@@ -4,23 +4,37 @@ import java.awt._
 
 import puzzle2d.Shape
 import puzzle2d._
-import rx.Scheduler
 import rx.lang.scala.schedulers.NewThreadScheduler
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Subject, Observable}
 import util.rx._
 
+import scala.concurrent.Future
 import scala.swing.event._
 import scala.swing.{Dimension, Graphics2D, Component}
 import rx.lang.scala.ExperimentalAPIs._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /** A [[scala.swing.Component]] that allows viewing and editing a [[puzzle2d.Shape]].
-  * It also allows overlaying a solution.
+  * This component displays editable goal shapes. It also takes a trigger to attempt solving.
+  * If a solution is found, it is also displayed.
   */
 class Board(val setShape: Observable[Shape] = Observable.empty,
             val solveTrigger: Observable[Unit] = Observable.empty,
             val pieceSet: Observable[PieceSet]) extends Component{
   minimumSize = new Dimension(200,200)
+
+  sealed trait SolveState {
+    def problem: Problem
+  }
+
+  object SolveState {
+    def attempt(p: Problem): Future[SolveState] = Future.apply(p.solve.map(Solved(p,_)).getOrElse(Unsolvable(p,Shape.empty)))
+  }
+  case class Unattempted(problem: Problem) extends SolveState
+  case class Solved(problem: Problem, solution: Problem#Solution) extends SolveState
+  case class Unsolvable(problem: Problem, contradiction: Shape) extends SolveState
+  case class Solving(problem: Problem) extends SolveState
 
   case class Transformation(trX: Int, trY: Int, width: Int){
     def locToScreen(l: Location): Rectangle = new Rectangle(l.x * width + trX, l.y * width + trY, width, width)
@@ -70,15 +84,23 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
 
   val problem: Observable[Problem] = boardState.combineLatestWith(pieceSet)(Problem(_,_)).distinctUntilChanged
 
+  val solutionState: Observable[SolveState] =
+    solveTrigger.withLatestFrom(problem){(_,p) => Observable.just(Solving(p)) ++ Observable.from(SolveState.attempt(p)) }.switch merge problem.map(Unattempted(_))
+
+  val lastSolutionState = solutionState.manifest(Unattempted(Problem.empty))
+
+  //TODO solver is always triggered twice (while `trigger` triggers only once)
   val currentSolution: Observable[Option[Problem#Solution]] =
-    solveTrigger.observeOn(NewThreadScheduler()).withLatestFrom(problem)((_,p) => p.solve) merge problem.map(_ => None)
+    solutionState.collect{
+      case s: Solved => Some(s.solution)
+      case _ => None
+    }
+    //solveTrigger.observeOn(NewThreadScheduler()).withLatestFrom(problem){(_,p) => p.solve } merge problem.map(_ => None)
 
   //used for drawing
   boardState.subscribe(_ => this.repaint())
   private val currentBoardState = boardState.manifest(Shape.empty)
-  currentSolution.subscribe(_ => this.repaint())
-  private val solutionState = currentSolution.manifest(None)
-
+  solutionState.subscribe(_ => this.repaint())
 
   override protected def paintComponent(g: Graphics2D): Unit = {
 
@@ -115,9 +137,22 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
     }
 
     //draw solution
-    g.setColor(Color.BLACK)
     g.setStroke(new BasicStroke(3f))
-    solutionState.getValue.foreach{s => s.placement.foreach(drawPiece)}
+    lastSolutionState.getValue match {
+      case Solved(_,solution) =>
+        g.setColor(Color.BLACK)
+        solution.placement.foreach(drawPiece)
+      case Unsolvable(_,c) =>
+        g.setColor(Color.RED)
+        g.fillOval(10,10,10,10)
+        g.drawOval(10,10,10,10)
+        drawPiece(c)
+      case Solving(_) =>
+        g.setColor(Color.YELLOW)
+        g.fillOval(10,10,10,10)
+        g.drawOval(10,10,10,10)
+      case _ => ()
+    }
   }
 }
 

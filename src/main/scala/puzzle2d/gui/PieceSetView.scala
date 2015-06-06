@@ -9,7 +9,7 @@ import util.rx._
 
 /** A view and an editor for a [[puzzle2d.PieceSet]]. */
 class PieceSetView(pieceSet: Observable[PieceSet]) extends MigPanel("") with RXComponent[PieceSet]{
-  val togglers: Observable[Seq[PieceToggler]] = pieceSet.map{ps =>
+  val togglers: Observable[Seq[PieceToggler]] = pieceSet.distinctUntilChanged.map{ps =>
     ps.pieces.map{
     case (p,n) =>
       new PieceToggler(p, initially = n)
@@ -22,7 +22,6 @@ class PieceSetView(pieceSet: Observable[PieceSet]) extends MigPanel("") with RXC
     this.peer.revalidate()
   }
 
-  //TODO this does not update properly
   val rxValue: Observable[PieceSet] =
   togglers.flatMap(ts => Observable.combineLatest(ts.map(t => t.toggler.rxValue.map(t.piece -> _)))(tups => PieceSet(tups.toMap)))
 }
