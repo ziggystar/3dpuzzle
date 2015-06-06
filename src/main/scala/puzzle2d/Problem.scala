@@ -22,7 +22,7 @@ case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
 
   case class Placed(prototype: Piece, place: Shape)
 
-  def solve: Option[Solution] = {
+  def solve(timeOut: Int = 10): Option[Solution] = {
     try {
       val solver = SolverFactory.newDefault()
 
@@ -45,6 +45,8 @@ case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
       set.pieces.foreach { case (piece, max) =>
         solver.addAtMost(new VecInt(vars.collect { case (pl, vi) if pl.prototype == piece => vi }(collection.breakOut): Array[Int]), max)
       }
+
+      solver.setTimeout(timeOut)
 
       Some(solver).filter(_.isSatisfiable).map {
         _.model.filter(_ > 0).map(back).map(_.place)

@@ -20,7 +20,7 @@ class ShapeTest extends Specification {
     p^
   "solving" ! {
     val problem = Problem(simpleGoal,PieceSet(Map(Piece(shapeI) -> 1, Piece(shapeO) -> 1)))
-    val solution = problem.solve
+    val solution = problem.solve(3)
     solution.exists(_.isValid)
   }
 }

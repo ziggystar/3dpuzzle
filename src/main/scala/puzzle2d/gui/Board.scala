@@ -2,6 +2,7 @@ package puzzle2d.gui
 
 import java.awt._
 
+import org.sat4j.specs.{TimeoutException, ContradictionException}
 import puzzle2d.Shape
 import puzzle2d._
 import rx.lang.scala.schedulers.NewThreadScheduler
@@ -29,11 +30,17 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   }
 
   object SolveState {
-    def attempt(p: Problem): Future[SolveState] = Future.apply(p.solve.map(Solved(p,_)).getOrElse(Unsolvable(p,Shape.empty)))
+    def attempt(p: Problem): SolveState = try {
+      p.solve(10).map(Solved(p,_)).getOrElse(Unsolvable(p,Shape.empty))
+    } catch {
+      case e: ContradictionException => Unsolvable(p,Shape.empty)
+      case r: TimeoutException => TimeOut(p)
+    }
   }
   case class Unattempted(problem: Problem) extends SolveState
   case class Solved(problem: Problem, solution: Problem#Solution) extends SolveState
   case class Unsolvable(problem: Problem, contradiction: Shape) extends SolveState
+  case class TimeOut(problem: Problem) extends SolveState
   case class Solving(problem: Problem) extends SolveState
 
   case class Transformation(trX: Int, trY: Int, width: Int){
@@ -85,17 +92,12 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   val problem: Observable[Problem] = boardState.combineLatestWith(pieceSet)(Problem(_,_)).distinctUntilChanged
 
   val solutionState: Observable[SolveState] =
-    solveTrigger.withLatestFrom(problem){(_,p) => Observable.just(Solving(p)) ++ Observable.from(SolveState.attempt(p)) }.switch merge problem.map(Unattempted(_))
+    (solveTrigger.withLatestFrom(problem){
+      (_,p) =>
+        Observable.just(Solving(p)) ++ Observable.from(Future.apply(SolveState.attempt(p)))
+    } merge problem.map(p => Observable.just(Unattempted(p)))).switch
 
   val lastSolutionState = solutionState.manifest(Unattempted(Problem.empty))
-
-  //TODO solver is always triggered twice (while `trigger` triggers only once)
-  val currentSolution: Observable[Option[Problem#Solution]] =
-    solutionState.collect{
-      case s: Solved => Some(s.solution)
-      case _ => None
-    }
-    //solveTrigger.observeOn(NewThreadScheduler()).withLatestFrom(problem){(_,p) => p.solve } merge problem.map(_ => None)
 
   //used for drawing
   boardState.subscribe(_ => this.repaint())
@@ -151,7 +153,15 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
         g.setColor(Color.YELLOW)
         g.fillOval(10,10,10,10)
         g.drawOval(10,10,10,10)
-      case _ => ()
+        g.setColor(Color.BLACK)
+        g.drawString("solving",30,20)
+      case t: TimeOut =>
+        g.setColor(Color.RED)
+        g.fillOval(10,10,10,10)
+        g.drawOval(10,10,10,10)
+        g.setColor(Color.BLACK)
+        g.drawString("timeout",30,20)
+      case _ =>
     }
   }
 }

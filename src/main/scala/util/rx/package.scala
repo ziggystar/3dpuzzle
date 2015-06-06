@@ -1,5 +1,7 @@
 package util
 
+import java.util.concurrent.atomic.AtomicReference
+
 import _root_.rx.lang.scala.Observable
 import _root_.rx.lang.scala.subjects.BehaviorSubject
 
@@ -11,9 +13,9 @@ package object rx {
 
   implicit class RichObservable[T](val obs: Observable[T]) extends AnyVal {
     def manifest(initial: T) = new {
-      @volatile private var last = initial
-      obs.subscribe(x => last = x)
-      def getValue: T = last
+      private val last = new AtomicReference(initial)
+      obs.subscribe(x => last.set(x))
+      def getValue: T = last.get()
     }
     def print(msg: String = ""): Unit = obs.subscribe(x => println(s"$msg$x"))
   }
