@@ -20,6 +20,9 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 //json parsing
 libraryDependencies += "io.spray" % "spray-json_2.11" % "1.3.2"
 
+//writing to svg
+libraryDependencies += "org.jfree" % "jfreesvg" % "3.0"
+
 //for the gui
 libraryDependencies += "io.reactivex" % "rxscala_2.11" % "0.24.1"
 

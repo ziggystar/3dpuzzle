@@ -6,7 +6,7 @@ import puzzle2d._
 import util.rx._
 
 import java.awt.{ComponentOrientation, Dimension}
-import javax.swing.{JComponent, KeyStroke, JOptionPane, JFrame}
+import javax.swing._
 
 import rx.lang.scala.{Subject, Observable}
 import rx.lang.scala.ExperimentalAPIs._
@@ -41,9 +41,10 @@ object Main {
     val selInstance = new RxChooser[Problem](savedInstances, "Problem Laden")(_.name)
     val selPieceSet = new RxChooser[PieceSet](Observable.just(pieceSets),"Teile Laden")(_.name)
     val currentPieceSet: Observable[PieceSet] = selInstance.rxValue.map(_.set) merge selPieceSet.rxValue
+    val exportShape = new RXButton("Export")
     val toolbar = new ToolBar {
       peer.setFloatable(false)
-      contents ++= solveButton :: clearButton :: saveButton :: selInstance :: selPieceSet :: Nil
+      contents ++= solveButton :: clearButton :: saveButton :: selInstance :: selPieceSet :: exportShape :: Nil
     }
 
     val pieces = new PieceSetView(Observable.just(pieceSets.head) ++ currentPieceSet)
@@ -55,7 +56,14 @@ object Main {
       setShape = actClearBoard.rxVale.map(_ => Shape.empty) merge selInstance.rxValue.map(_.goal),
       solveTrigger = actionSolve.rxVale)
 
+    exportShape.rxValue.foreach{ _ =>
+      val fc = new FileChooser()
+      val r = fc.showDialog(null, "Choose a file to save shape")
+      r match {
+        case FileChooser.Result.Approve => board.write2SVG(fc.selectedFile)
+      }
 
+    }
 
     val root = new MigPanel(""){
       add(toolbar, "span 2, growx,wrap")

@@ -1,7 +1,9 @@
 package puzzle2d.gui
 
 import java.awt._
+import java.io.{PrintStream, FileOutputStream, File}
 
+import org.jfree.graphics2d.svg.SVGGraphics2D
 import org.sat4j.specs.{TimeoutException, ContradictionException}
 import puzzle2d.Shape
 import puzzle2d._
@@ -103,6 +105,17 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   boardState.subscribe(_ => this.repaint())
   private val currentBoardState = boardState.manifest(Shape.empty)
   solutionState.subscribe(_ => this.repaint())
+
+  def write2SVG(f: File): Unit = {
+    val svg2 = new SVGGraphics2D(this.bounds.width, this.bounds.height)
+    paintComponent(svg2)
+
+    try {
+      val fout = new PrintStream(new FileOutputStream(f))
+      fout.println(svg2.getSVGDocument)
+      fout.close()
+    }
+  }
 
   override protected def paintComponent(g: Graphics2D): Unit = {
 
