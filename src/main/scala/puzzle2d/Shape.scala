@@ -36,7 +36,7 @@ case class Shape(locations: Set[Location]) {
     } yield n.translate(tx,ty)
   }
   override def toString: String =
-    (minY to maxY).map(y => (minX to maxX).map(x => if(locations(Location(x,y))) '#' else ' ')(collection.breakOut): String).mkString("\n")
+    (minY to maxY).reverse.map(y => (minX to maxX).map(x => if(locations(Location(x,y))) '#' else ' ')(collection.breakOut): String).mkString("\n")
 }
 
 object Shape {
