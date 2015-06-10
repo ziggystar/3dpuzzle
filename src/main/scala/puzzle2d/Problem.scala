@@ -2,14 +2,16 @@ package puzzle2d
 
 import org.sat4j.core.VecInt
 import org.sat4j.minisat.SolverFactory
-import org.sat4j.specs.{TimeoutException, ContradictionException}
+import org.sat4j.specs.{ISolver, TimeoutException, ContradictionException}
 
 /** A problem consists of a [[PieceSet]] and a [[Shape]] that has to be filled. */
 case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
-  sealed trait Result
-  case object Timeout extends Result
-  case object Unsolvable extends Result
-  case class Solution(placement: Seq[Shape]) extends Result {
+  sealed trait Result{
+    def solver: ISolver
+  }
+  case class Timeout(solver: ISolver) extends Result
+  case class Unsolvable(solver: ISolver) extends Result
+  case class Solution(placement: Seq[Shape],solver: ISolver) extends Result {
     require(isValid, "solution is not valid")
     def isValid: Boolean = {
       val usedValidPieces = {
@@ -17,7 +19,7 @@ case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
         used.keySet.forall{case k => used(k).size <= set.pieces(k)}
       }
       val noOverlap = placement.flatMap(_.locations).groupBy(identity).forall(_._2.size == 1)
-      val goalCovered = placement.reduce(_.union(_)).locations == goal.locations
+      val goalCovered = placement.foldLeft(Shape.empty)(_.union(_)).locations == goal.locations
       usedValidPieces && goalCovered && noOverlap
     }
 
@@ -27,8 +29,9 @@ case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
   case class Placed(prototype: Piece, place: Shape)
 
   def solve(timeOut: Int = 10): Result = {
+    var solver: ISolver = null
     try {
-      val solver = SolverFactory.newDefault()
+      solver = SolverFactory.newDefault()
 
       val placements: IndexedSeq[Placed] = (for {
         piece <- set.pieces.keys if set.pieces(piece) > 0
@@ -54,10 +57,10 @@ case class Problem(goal: Shape, set: PieceSet, name: String = "anon"){
 
       Some(solver).filter(_.isSatisfiable).map {
         _.model.filter(_ > 0).map(back).map(_.place)
-      }.map(Solution(_)).getOrElse(Unsolvable)
+      }.map(Solution(_,solver)).getOrElse(Unsolvable(solver))
     } catch {
-      case e: TimeoutException => Timeout
-      case e: ContradictionException => Unsolvable
+      case e: TimeoutException => Timeout(solver)
+      case e: ContradictionException => Unsolvable(solver)
     }
   }
 }

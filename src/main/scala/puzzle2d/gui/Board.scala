@@ -4,6 +4,8 @@ import java.awt._
 import java.io.{PrintStream, FileOutputStream, File}
 
 import org.jfree.graphics2d.svg.SVGGraphics2D
+import org.sat4j.specs.ISolver
+import org.sat4j.tools.xplain.Xplain
 import puzzle2d.Shape
 import puzzle2d._
 import rx.lang.scala.subjects.BehaviorSubject
@@ -31,21 +33,21 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
 
   object SolveState {
     def attempt(p: Problem): SolveState = p.solve(10) match {
-      case s: p.Solution => Solved(p, s)
-      case p.Timeout => TimeOut(p)
-      case p.Unsolvable => Unsolvable(p, Shape.empty)
+      case s@p.Solution(_,solver) => Solved(p, s, solver)
+      case p.Timeout(s) => TimeOut(p)
+      case p.Unsolvable(s) => Unsolvable(p, s)
     }
   }
 
   case class Unattempted(problem: Problem) extends SolveState
-  case class Solved(problem: Problem, solution: Problem#Solution) extends SolveState {
+  case class Solved(problem: Problem, solution: Problem#Solution, solver: ISolver) extends SolveState {
     def usedPieces: Map[Piece,Int] = {
       val pieces = problem.set.pieces.keySet
       val solAsPieces = solution.placement.map(shape => pieces.find(_.represents(shape)).get)
       solAsPieces.groupBy(identity).mapValues(_.size)
     }
   }
-  case class Unsolvable(problem: Problem, contradiction: Shape) extends SolveState
+  case class Unsolvable(problem: Problem, solver: ISolver) extends SolveState
   case class TimeOut(problem: Problem) extends SolveState
   case class Solving(problem: Problem) extends SolveState
 
@@ -103,7 +105,6 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
 
   val mappedDrags: Observable[Observable[Location]] = leftDrags.map { drag =>
     val tr = currentTransformation.getValue
-    println(s"using $tr")
     drag.map(me => tr.screenPointToLoc(me.point)).distinct
   }
 
@@ -129,17 +130,17 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   def write2SVG(f: File): Unit = {
     val svg2 = new SVGGraphics2D(this.bounds.width, this.bounds.height)
     paintComponent(svg2)
-
-    try {
-      val fout = new PrintStream(new FileOutputStream(f))
-      fout.println(svg2.getSVGDocument)
-      fout.close()
-    }
+    val fout = new PrintStream(new FileOutputStream(f))
+    fout.println(svg2.getSVGDocument)
+    fout.close()
   }
 
   override protected def paintComponent(g: Graphics2D): Unit = {
 
     val trans = currentTransformation.getValue
+
+    val solveState = lastSolutionState.getValue
+
     def drawPiece(s: Shape, transform: Transformation = trans): Unit = {
       import util.Dir._
       def drawSide(l: Location, side: Dir): Unit = {
@@ -156,8 +157,12 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
         d <- util.Dir.values if !s.locations(l.step(d))
       } drawSide(l,d)
     }
+
     val clip: Rectangle = Option(g.getClipBounds).getOrElse(this.bounds)
-    g.setBackground(Color.LIGHT_GRAY)
+    g.setBackground(solveState match {
+      case _: Unsolvable => Color.decode("#EDD8C0")
+      case _ => Color.WHITE
+    })
     g.clearRect(clip.x,clip.y,clip.width,clip.height)
 
     //draw goal shape
@@ -165,7 +170,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
       loc <- currentBoardState.getValue.locations
       scrRect = trans.locToScreen(loc) if clip.intersects(scrRect)
     } {
-      g.setColor(Color.GRAY)
+      g.setColor(Color.decode("#7D9AAA"))
       g.fillRect(scrRect.x,scrRect.y,scrRect.width,scrRect.height)
       g.setColor(g.getBackground)
       g.drawRect(scrRect.x,scrRect.y,scrRect.width,scrRect.height)
@@ -173,37 +178,38 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
 
     //draw solution
     g.setStroke(new BasicStroke(3f))
-    lastSolutionState.getValue match {
-      case s@Solved(_,solution) =>
-        g.setColor(Color.BLACK)
+
+    (solveState match {
+      case s@Solved(_, solution, solver) => Some(solver)
+      case Unsolvable(_,solver) => Some(solver)
+      case _ => None
+    }) foreach { solver =>
+      g.setColor(Color.decode("#7D9AAA").darker.darker)
+      g.drawString(s"${solver.realNumberOfVariables} variables, ${solver.nConstraints()} clauses", 10, 15)
+
+    }
+    solveState match {
+      case s@Solved(_,solution,solver) =>
         solution.placement.foreach(drawPiece(_))
         val legendTransform = Transformation(0,0,20)
         s.usedPieces.zipWithIndex.foreach{case ((piece,num),index) =>
-            g.setColor(Color.BLACK)
-            val tr = g.getTransform
+          g.setColor(Color.DARK_GRAY)
+          val tr = g.getTransform
             g.translate(0,30 + index * 4 * legendTransform.width)
             g.drawString(s"$num:",0,15)
             g.translate(20,0)
             drawPiece(piece.representative,legendTransform)
             g.setTransform(tr)
         }
-      case Unsolvable(_,c) =>
-        g.setColor(Color.RED)
-        g.fillOval(10,10,10,10)
-        g.drawOval(10,10,10,10)
-        drawPiece(c)
+      case Unsolvable(_,solver) =>
+        g.setColor(Color.BLACK)
+        g.drawString("UNSOLVABLE",10,20)
       case Solving(_) =>
-        g.setColor(Color.YELLOW)
-        g.fillOval(10,10,10,10)
-        g.drawOval(10,10,10,10)
         g.setColor(Color.BLACK)
-        g.drawString("solving",30,20)
+        g.drawString("SOLVING",10,20)
       case t: TimeOut =>
-        g.setColor(Color.RED)
-        g.fillOval(10,10,10,10)
-        g.drawOval(10,10,10,10)
         g.setColor(Color.BLACK)
-        g.drawString("timeout",30,20)
+        g.drawString("TIMEOUT",10,20)
       case _ =>
     }
   }

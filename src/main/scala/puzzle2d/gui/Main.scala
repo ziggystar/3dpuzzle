@@ -13,6 +13,7 @@ import rx.lang.scala.ExperimentalAPIs._
 import util.gui._
 import util.rx.FilePersisted
 
+import scala.concurrent.duration.Duration
 import scala.swing._
 
 object Main {
@@ -51,10 +52,16 @@ object Main {
 
     val saveNames = saveButton.rxValue.map(_ => JOptionPane.showInputDialog("Problem Name"))
 
+    val solveTrigger = Subject[Unit]()
+    actionSolve.rxVale.subscribe(solveTrigger)
+
     val board: Board = new Board(
       pieceSet = pieces.rxValue,
       setShape = actClearBoard.rxVale.map(_ => Shape.empty) merge selInstance.rxValue.map(_.goal),
-      solveTrigger = actionSolve.rxVale)
+      solveTrigger = solveTrigger)
+
+    //auto-solve
+    board.problem.distinctUntilChanged.debounce(Duration("1s")).map(_ => ()).subscribe(solveTrigger)
 
     toolbar.contents += new RXLabel(board.boardState.map(s => s"Pieces: ${s.locations.size}"))
 
