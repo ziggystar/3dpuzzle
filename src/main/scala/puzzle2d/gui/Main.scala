@@ -10,7 +10,7 @@ import javax.swing._
 
 import rx.lang.scala.{Subject, Observable}
 import rx.lang.scala.ExperimentalAPIs._
-import util.gui.{RXButton, RxChooser, ActionObs, MigPanel}
+import util.gui._
 import util.rx.FilePersisted
 
 import scala.swing._
@@ -55,6 +55,8 @@ object Main {
       pieceSet = pieces.rxValue,
       setShape = actClearBoard.rxVale.map(_ => Shape.empty) merge selInstance.rxValue.map(_.goal),
       solveTrigger = actionSolve.rxVale)
+
+    toolbar.contents += new RXLabel(board.boardState.map(s => s"Pieces: ${s.locations.size}"))
 
     exportShape.rxValue.foreach{ _ =>
       val fc = new FileChooser()

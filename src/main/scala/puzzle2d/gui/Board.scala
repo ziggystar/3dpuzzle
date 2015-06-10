@@ -38,7 +38,13 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   }
 
   case class Unattempted(problem: Problem) extends SolveState
-  case class Solved(problem: Problem, solution: Problem#Solution) extends SolveState
+  case class Solved(problem: Problem, solution: Problem#Solution) extends SolveState {
+    def usedPieces: Map[Piece,Int] = {
+      val pieces = problem.set.pieces.keySet
+      val solAsPieces = solution.placement.map(shape => pieces.find(_.represents(shape)).get)
+      solAsPieces.groupBy(identity).mapValues(_.size)
+    }
+  }
   case class Unsolvable(problem: Problem, contradiction: Shape) extends SolveState
   case class TimeOut(problem: Problem) extends SolveState
   case class Solving(problem: Problem) extends SolveState
@@ -134,10 +140,10 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   override protected def paintComponent(g: Graphics2D): Unit = {
 
     val trans = currentTransformation.getValue
-    def drawPiece(s: Shape): Unit = {
+    def drawPiece(s: Shape, transform: Transformation = trans): Unit = {
       import util.Dir._
       def drawSide(l: Location, side: Dir): Unit = {
-        val r = trans.locToScreen(l)
+        val r = transform.locToScreen(l)
         side match {
           case Top => g.drawLine(r.x,r.y,r.x+r.width,r.y)
           case Bottom => g.drawLine(r.x,r.y+r.height,r.x+r.width,r.y+r.height)
@@ -168,9 +174,19 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
     //draw solution
     g.setStroke(new BasicStroke(3f))
     lastSolutionState.getValue match {
-      case Solved(_,solution) =>
+      case s@Solved(_,solution) =>
         g.setColor(Color.BLACK)
-        solution.placement.foreach(drawPiece)
+        solution.placement.foreach(drawPiece(_))
+        val legendTransform = Transformation(0,0,20)
+        s.usedPieces.zipWithIndex.foreach{case ((piece,num),index) =>
+            g.setColor(Color.BLACK)
+            val tr = g.getTransform
+            g.translate(0,30 + index * 4 * legendTransform.width)
+            g.drawString(s"$num:",0,15)
+            g.translate(20,0)
+            drawPiece(piece.representative,legendTransform)
+            g.setTransform(tr)
+        }
       case Unsolvable(_,c) =>
         g.setColor(Color.RED)
         g.fillOval(10,10,10,10)

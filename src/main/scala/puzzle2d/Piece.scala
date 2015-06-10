@@ -10,6 +10,8 @@ class Piece(prototype: Shape){
 
   val representative: Shape = shapes.head
 
+  def represents(s: Shape): Boolean = shapes.contains(s.normalize)
+
   override val hashCode: Int = shapes.hashCode()
 
   override def equals(obj: scala.Any): Boolean = obj match {
