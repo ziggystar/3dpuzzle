@@ -4,10 +4,8 @@ import java.awt._
 import java.io.{PrintStream, FileOutputStream, File}
 
 import org.jfree.graphics2d.svg.SVGGraphics2D
-import org.sat4j.specs.{TimeoutException, ContradictionException}
 import puzzle2d.Shape
 import puzzle2d._
-import rx.lang.scala.schedulers.NewThreadScheduler
 import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Subject, Observable}
 import util.rx._
@@ -45,16 +43,19 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   case class TimeOut(problem: Problem) extends SolveState
   case class Solving(problem: Problem) extends SolveState
 
+  /** The translation describes how to translate the drawn shape on the canvas. */
   case class Transformation(trX: Int, trY: Int, width: Int){
     def locToScreen(l: Location): Rectangle = new Rectangle(l.x * width + trX, l.y * width + trY, width, width)
-    def screenToLoc(scrX: Int, scrY: Int) = Location((scrX - trX) / width, (scrY - trY) / width )
-    def screenToLoc(p: Point) = Location((p.x - trX) / width, (p.y - trY) / width )
+    def screenToLoc(scrX: Int, scrY: Int): Location = {
+      def translate(t: Int, value: Int): Int = {
+        val beforeScale = value - t
+        if(beforeScale >= 0) beforeScale / width
+        else beforeScale / width - 1
+      }
+      Location(translate(trX,scrX), translate(trY,scrY))
+    }
+    def screenPointToLoc(p: Point): Location = screenToLoc(p.x,p.y)
   }
-
-  private val origin: BehaviorSubject[(Int, Int)] = BehaviorSubject[(Int,Int)]((0,0))
-  private val cellSize: BehaviorSubject[Int] = BehaviorSubject[Int](30)
-  val transformation: Observable[Transformation] =
-    origin.combineLatestWith(cellSize){case ((tx,ty),w) => Transformation(tx,ty,w)}
 
   private val mouseMoves: Subject[MouseMoved] = Subject()
   private val mousePressed: Subject[MousePressed] = Subject()
@@ -69,10 +70,20 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
     case e: MouseDragged => mouseDragged.onNext(e)
   }
 
-  def toLocation(me: Observable[MouseEvent]): Observable[Location] =
-    me.withLatestFrom(transformation)((e,t) => t.screenToLoc(e.point))
-
   val drags: Observable[Observable[MouseEvent]] = mousePressed.map(mp => Observable.just(mp) ++ mouseDragged.takeUntil(mouseReleased))
+  val leftDrags: Observable[Observable[MouseEvent]] = drags.filter(drag => drag.toBlocking.head.peer.getButton == java.awt.event.MouseEvent.BUTTON1)
+  val rightDrags: Observable[Observable[MouseEvent]] = drags.filter(drag => drag.toBlocking.head.peer.getButton == java.awt.event.MouseEvent.BUTTON3)
+
+
+  private val cellSize: Observable[Int] = BehaviorSubject[Int](30)
+  private val origin: Observable[(Int, Int)] = Observable.just((0,0)) ++ setShape.withLatestFrom(cellSize){
+    case (shape, cs) => (this.bounds.width/2 - (shape.minX + shape.width/2)*cs, this.bounds.height/2 - (shape.minY + shape.height/2)*cs)
+  }
+
+  val transformation: Observable[Transformation] =
+    origin.combineLatestWith(cellSize){case ((tx,ty),w) => Transformation(tx,ty,w)}
+  private val currentTransformation = transformation.manifest(Transformation(0,0,30))
+  transformation.foreach(_ => this.repaint())
 
   def applyDragsToShape(s: Shape, ds: Observable[Observable[Location]]): Observable[Shape] = {
     val annotated = ds.flatMap(drag => drag zip Observable.from(Stream(true) ++ Stream.continually(false)))
@@ -84,12 +95,15 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
     }.map(_._1)
   }
 
+  val mappedDrags: Observable[Observable[Location]] = leftDrags.map { drag =>
+    val tr = currentTransformation.getValue
+    println(s"using $tr")
+    drag.map(me => tr.screenPointToLoc(me.point)).distinct
+  }
+
   val boardState: Observable[Shape] =
     (Observable.just(Shape.empty) ++ setShape)
-      .switchMap(
-        base => Observable.just(base) ++
-          applyDragsToShape(base,drags.map(d => toLocation(d).distinctUntilChanged))
-      )
+      .switchMap(base => { Observable.just(base) ++ applyDragsToShape(base, mappedDrags)})
 
   val problem: Observable[Problem] = boardState.combineLatestWith(pieceSet)(Problem(_,_)).distinctUntilChanged
 
@@ -119,7 +133,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
 
   override protected def paintComponent(g: Graphics2D): Unit = {
 
-    val trans = Transformation(origin.getValue._1,origin.getValue._2,cellSize.getValue)
+    val trans = currentTransformation.getValue
     def drawPiece(s: Shape): Unit = {
       import util.Dir._
       def drawSide(l: Location, side: Dir): Unit = {
