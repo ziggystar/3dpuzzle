@@ -12,6 +12,7 @@ import rx.lang.scala.subjects.BehaviorSubject
 import rx.lang.scala.{Subject, Observable}
 import util.rx._
 
+import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.swing.event._
 import scala.swing.{Dimension, Graphics2D, Component}
@@ -137,6 +138,8 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
 
   override protected def paintComponent(g: Graphics2D): Unit = {
 
+    g.addRenderingHints(Map(RenderingHints.KEY_TEXT_ANTIALIASING -> RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_VRGB).asJava)
+
     val trans = currentTransformation.getValue
 
     val solveState = lastSolutionState.getValue
@@ -203,13 +206,13 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
         }
       case Unsolvable(_,solver) =>
         g.setColor(Color.BLACK)
-        g.drawString("UNSOLVABLE",10,20)
+        g.drawString("UNSOLVABLE",10,30)
       case Solving(_) =>
         g.setColor(Color.BLACK)
-        g.drawString("SOLVING",10,20)
+        g.drawString("SOLVING",10,30)
       case t: TimeOut =>
         g.setColor(Color.BLACK)
-        g.drawString("TIMEOUT",10,20)
+        g.drawString("TIMEOUT",10,30)
       case _ =>
     }
   }
