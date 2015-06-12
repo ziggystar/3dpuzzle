@@ -33,19 +33,27 @@ object Main {
   val actionSolve = ActionObs("Solve")
   val actClearBoard = ActionObs("Clear")
 
+  val actionToggleAdmin = ActionObs("AdminToggle")
+
   def main (args: Array[String] ) {
     val savedInstances: Subject[Set[Problem]] = FilePersisted.asJson(instanceFile, Set())
 
-    val solveButton = new Button(actionSolve)
     val clearButton = new Button(actClearBoard)
-    val saveButton = new RXButton("Speichern")
     val selInstance = new RxChooser[Problem](savedInstances, "Problem Laden")(_.name)
     val selPieceSet = new RxChooser[PieceSet](Observable.just(pieceSets),"Teile Laden")(_.name)
+
+    val saveButton = new RXButton("Speichern")
+    val solveButton = new Button(actionSolve)
     val currentPieceSet: Observable[PieceSet] = selInstance.rxValue.map(_.set) merge selPieceSet.rxValue
     val exportShape = new RXButton("Export")
+    val adminSep = Component.wrap(new JToolBar.Separator())
     val toolbar = new ToolBar {
       peer.setFloatable(false)
-      contents ++= solveButton :: clearButton :: saveButton :: selInstance :: selPieceSet :: exportShape :: Nil
+      contents ++= clearButton :: selInstance :: selPieceSet :: adminSep :: exportShape :: solveButton :: saveButton :: Nil
+    }
+
+    (Observable.just(false) ++ actionToggleAdmin.rxVale.scan(false)((x,_) => !x)).foreach { state =>
+      Seq(adminSep, exportShape, solveButton, saveButton).foreach(_.visible = state)
     }
 
     val pieces = new PieceSetView(Observable.just(pieceSets.head) ++ currentPieceSet)
@@ -63,6 +71,7 @@ object Main {
     //auto-solve
     board.problem.distinctUntilChanged.debounce(Duration("1s")).map(_ => ()).subscribe(solveTrigger)
 
+    toolbar.contents += Component.wrap(new JToolBar.Separator())
     toolbar.contents += new RXLabel(board.boardState.map(s => s"Pieces: ${s.locations.size}"))
 
     exportShape.rxValue.foreach{ _ =>
@@ -100,6 +109,9 @@ object Main {
     root.peer.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("F1"), "Solve")
     root.peer.getActionMap.put("Solve", actionSolve.peer)
     solveButton.tooltip = "F1"
+
+    root.peer.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("F12"), "AdminToggle")
+    root.peer.getActionMap.put("AdminToggle", actionToggleAdmin.peer)
 
     root.peer.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("F2"), "Clear")
     root.peer.getActionMap.put("Clear", actClearBoard.peer)
