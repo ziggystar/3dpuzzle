@@ -1,6 +1,29 @@
 3dpuzzle
 ========
 
+##Update - 2D GUI
+While the old code described further down still lives within the repository, new code under `puzzle2d` has shifted the focus of the project a bit. There you can find the following
+
+- new SAT encoding for 2d problems only, now supporting cardinality constraints on the pieces
+- read/write of json format for piece sets and goal shapes
+ 
+##GUI
+
+The 2d solver comes with a pretty sophisticated (and undocumented) Swing GUI that supports editing and solving goal shapes (hit F12 for more controls).
+
+- save goal shapes to `~/.2dpuzzle/instances` and load them again
+- switch between pre-installed piece-sets, change cardinality of pieces in GUI
+    - Tetris pieces
+    - Ubongo Pieces
+    - Kubix: a set of building blocks available at Amazon
+- drawing of goal shapes, solver runs automatically with 10s time-out
+- export of goal shapes to SVG to facilitate printing of problem instances for solving with physical pieces
+- comes with evil mixture of German and English
+
+![screenshot](/screenshot.png?raw=true "Screenshot")
+
+
+##Old Description
 A solver for a 3D, tetris-like puzzle based on a reduction to SAT.
 
 The goal is to fill a predefined form with a given set of blocks (see `pieceset-standard.3d` under resources). 
