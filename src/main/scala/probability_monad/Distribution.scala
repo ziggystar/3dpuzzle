@@ -1,3 +1,8 @@
+/**
+ * This code is taken from
+ * https://github.com/jliszka/probability-monad
+ * 
+ * It is distributed under Apache 2.0. */
 package probability_monad
 
 import scala.annotation.tailrec
