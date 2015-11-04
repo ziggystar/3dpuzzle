@@ -1,7 +1,8 @@
 package puzzle2d.gui
 
-import java.io.File
+import java.io.{Serializable, File}
 
+import org.sat4j.specs.ISolver
 import puzzle2d._
 import util.rx._
 
@@ -68,6 +69,18 @@ object Main {
       setShape = actClearBoard.rxVale.map(_ => Shape.empty) merge selInstance.rxValue.map(_.goal),
       solveTrigger = solveTrigger)
 
+    val solver: Observable[ISolver] = board.solutionState.collect{
+      case board.Solved(_,_,s) => s
+      case board.Unsolvable(_,s) => s
+    }
+
+    val satString = solver.map{s =>
+      s.toString()
+    }
+
+    val satPane = new JTextArea()
+    satString.subscribe(satPane.setText(_))
+
     //auto-solve
     board.problem.distinctUntilChanged.debounce(Duration("1s")).map(_ => ()).subscribe(solveTrigger)
 
@@ -90,7 +103,8 @@ object Main {
         horizontalScrollBarPolicy = ScrollPane.BarPolicy.Never
       }
       add(piecePane, "pushy,growy")
-      add(board,"push,grow")
+      add(board,"push,grow,wrap")
+      add(Component.wrap(satPane), "span 2,wrap, growx")
     }
 
     val addProblems = saveNames.withLatestFrom(board.problem){case (name,problem) => problem.copy(name = name)}
