@@ -3,13 +3,13 @@
 
 Some Scala code that allows filling arbitrary shapes with predefined pieces using a reduction to SAT.
 
-##Update - 2D GUI
+## Update - 2D GUI
 While the old code for solving 3d puzzles (described further down) still lives within the repository, new code under `puzzle2d` has shifted the focus of the project to solving 2d puzzles. There you can find the following
 
 - new SAT encoding for 2d problems only, now supporting cardinality constraints on the pieces
 - read/write of json format for piece sets and goal shapes
  
-##GUI
+## GUI
 
 The 2d solver comes with a (more or less undocumented) Swing GUI that supports editing and solving goal shapes (hit F12 for more controls).
 
@@ -25,7 +25,7 @@ The 2d solver comes with a (more or less undocumented) Swing GUI that supports e
 ![screenshot](/screenshot.png?raw=true "Screenshot")
 
 
-##Old Description for 3d solver part
+## Old Description for 3d solver part
 A solver for a 3D, tetris-like puzzle based on a reduction to SAT.
 
 The goal is to fill a predefined form with a given set of blocks (see `pieceset-standard.3d` under resources). 
