@@ -3,8 +3,7 @@
 
 Some Scala code that allows filling arbitrary shapes with predefined pieces using a reduction to SAT.
 
-## Update - 2D GUI
-While the old code for solving 3d puzzles (described further down) still lives within the repository, new code under `puzzle2d` has shifted the focus of the project to solving 2d puzzles. There you can find the following
+While the original code for solving 3d puzzles (described further down) still lives within the repository, new code under `puzzle2d` has shifted the focus of the project to solving 2d puzzles. There you can find the following
 
 - new SAT encoding for 2d problems only, now supporting cardinality constraints on the pieces
 - read/write of json format for piece sets and goal shapes
@@ -24,8 +23,7 @@ The 2d solver comes with a (more or less undocumented) Swing GUI that supports e
 
 ![screenshot](/screenshot.png?raw=true "Screenshot")
 
-
-## Old Description for 3d solver part
+# Old Description for 3d solver part
 A solver for a 3D, tetris-like puzzle based on a reduction to SAT.
 
 The goal is to fill a predefined form with a given set of blocks (see `pieceset-standard.3d` under resources). 
@@ -39,7 +37,7 @@ three dimensions, the pieces are used potentially mirrored in a 2d setting.
 
 SAT-Encoding
 --------
-The encoding is rather implicit.
+
  - Variables select the index of a possible placements of a certain piece (pieces can also be unused, i.e. there is the null placement).
  - Other variables specify whether a voxel is occupied by a certain piece (total voxels times number of pieces).
  - Then piece-specific occupation is related to general occupation.
@@ -48,7 +46,9 @@ Input format
 ------------
 Input problems can be found under the `problems` folder. 
 
-###Depth Map
+### Depth Map
+
+Cannot describe shapes with "holes", where a filled voxel is above an empty one:
 
     solid(
     00123,
@@ -58,11 +58,14 @@ Input problems can be found under the `problems` folder.
     00000
     )
 
-###Voxel
+### Voxel
+
 No example yet. See parser implementation in `PieceParser.scala`.
 
-###2D
+### 2D
+
 Allows to draw two dimensional problems using ASCII art (`#` as filled). Only one problem per file. Specify file using
+
 `--file-2d`.
 
     2D

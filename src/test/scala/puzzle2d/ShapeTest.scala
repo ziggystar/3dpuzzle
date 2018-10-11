@@ -1,14 +1,13 @@
 package puzzle2d
 
 import org.specs2.Specification
-import org.specs2.specification.Fragments
 
 class ShapeTest extends Specification {
   val shapeI: Shape = Shape.parseString("####")
   val shapeO: Shape = Shape.parseString("##\n##")
   //solvable using an I and an O
   val simpleGoal: Shape = Shape.parseString("####\n##\n##")
-  override def is: Fragments =
+  override def is =
   "parsing tests" ^
     "parse single block" ! (Shape.parseString("#") === Shape(Set(Location(0,0)))) ^
     "parse single block normalized" ! (Shape.parseString(" #") === Shape(Set(Location(0,0)))) ^

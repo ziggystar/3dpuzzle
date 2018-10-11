@@ -16,7 +16,6 @@ import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.swing.event._
 import scala.swing.{Dimension, Graphics2D, Component}
-import rx.lang.scala.ExperimentalAPIs._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /** A [[scala.swing.Component]] that allows viewing and editing a [[puzzle2d.Shape]].
@@ -118,7 +117,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   val solutionState: Observable[SolveState] =
     (solveTrigger.withLatestFrom(problem){
       (_,p) =>
-        Observable.just(Solving(p)) ++ Observable.from(Future.apply(SolveState.attempt(p)))
+        Observable.just(Solving(p)) ++ Observable.from(Future(SolveState.attempt(p)))
     }.cache merge problem.map(p => Observable.just(Unattempted(p)))).switch
 
   val lastSolutionState = solutionState.manifest(Unattempted(Problem.empty))

@@ -1,15 +1,11 @@
 package puzzle2d.gui
 
+import java.awt.Dimension
 import java.io.File
 
-import puzzle2d._
-import util.rx._
-
-import java.awt.{ComponentOrientation, Dimension}
 import javax.swing._
-
-import rx.lang.scala.{Subject, Observable}
-import rx.lang.scala.ExperimentalAPIs._
+import puzzle2d._
+import rx.lang.scala.{Observable, Subject}
 import util.gui._
 import util.rx.FilePersisted
 
@@ -72,7 +68,7 @@ object Main {
     board.problem.distinctUntilChanged.debounce(Duration("1s")).map(_ => ()).subscribe(solveTrigger)
 
     toolbar.contents += Component.wrap(new JToolBar.Separator())
-    toolbar.contents += new RXLabel(board.boardState.map(s => s"Pieces: ${s.locations.size}"))
+    toolbar.contents += new RXLabel(board.boardState.map(s => s"Cells: ${s.locations.size}"))
 
     exportShape.rxValue.foreach{ _ =>
       val fc = new FileChooser()
