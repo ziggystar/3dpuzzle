@@ -43,21 +43,21 @@ case class Piece(blocks: Set[(Int, Int, Int)]) {
   /** Translates the piece such that the least block is (0,0,0). */
   def normalize: Piece = translate(-minX, -minY, -minZ)
 
-  def minX = blocks.map(_._1).min
+  def minX: Int = blocks.map(_._1).min
 
-  def minY = blocks.map(_._2).min
+  def minY: Int = blocks.map(_._2).min
 
-  def minZ = blocks.map(_._3).min
+  def minZ: Int = blocks.map(_._3).min
 
-  def maxX = blocks.map(_._1).max
+  def maxX: Int = blocks.map(_._1).max
 
-  def maxY = blocks.map(_._2).max
+  def maxY: Int = blocks.map(_._2).max
 
-  def maxZ = blocks.map(_._3).max
+  def maxZ: Int = blocks.map(_._3).max
 
-  def height = maxY - minY
-  def width = maxX - minX
-  def depth = maxZ - minZ
+  def height: Int = maxY - minY
+  def width: Int = maxX - minX
+  def depth: Int = maxZ - minZ
 
   override def toString: String = {
     blocks.toString + "\n" + CharMap(blocks.map(_ -> '#')(collection.breakOut)).toString
@@ -85,21 +85,5 @@ object Piece {
   }
 }
 
-case class CharMap(m: Map[(Int, Int, Int), Char]) {
-  def addPiece(p: Piece, c: Char): CharMap = CharMap(m ++ p.blocks.map(_ -> c))
 
-  override def toString: String = {
-    val stepX = m.keys.map(_._1).max + 2
-    val maxX = (m.keys.map(_._3).max + 1) * stepX - 2
-    val maxY = m.keys.map(_._2).max
-
-    def makeLine(y: Int): String = (0 to maxX).map {
-      case x if x % stepX == stepX - 1 => '|'
-      case x if m.contains((x % stepX, y, x / stepX)) => m((x % stepX, y, x / stepX))
-      case _ => '.'
-    }.mkString
-
-    (0 to maxY).map(makeLine).mkString("\n")
-  }
-}
 

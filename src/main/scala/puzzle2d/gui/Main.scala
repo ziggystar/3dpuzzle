@@ -12,10 +12,16 @@ import util.rx.FilePersisted
 import scala.concurrent.duration.Duration
 import scala.swing._
 
+import puzzle2d.json.PuzzleJsonProtocol._
+
 object Main {
-  import puzzle2d.json.PuzzleJsonProtocol._
-  val pieceSets: Set[PieceSet] =
-    Set("puzzle2d/pieceset-kubix.json", "puzzle2d/pieceset-ubongo.json", "puzzle2d/pieceset-tetris.json").map(f => parsePieceSet(ClassLoader.getSystemResourceAsStream(f)).get)
+
+  val pieceSets: Set[PieceSet] = Set(
+      "puzzle2d/pieceset-kubix.json",
+      "puzzle2d/pieceset-ubongo.json",
+      "puzzle2d/pieceset-tetris.json",
+      "puzzle2d/pieceset-smart-games.json"
+    ).map(f => parsePieceSet(this.getClass.getClassLoader.getResourceAsStream(f)).get)
 
   val instanceFile: File = {
     val f = new File(System.getProperty("user.home") + "/.2dpuzzle")
@@ -79,7 +85,7 @@ object Main {
 
     }
 
-    val root = new MigPanel(""){
+    val root: MigPanel = new MigPanel(""){
       add(toolbar, "span 2, growx,wrap")
       private val piecePane: ScrollPane = new ScrollPane(pieces){
         verticalScrollBarPolicy = ScrollPane.BarPolicy.AsNeeded
@@ -90,7 +96,7 @@ object Main {
     }
 
     val addProblems = saveNames.withLatestFrom(board.problem){case (name,problem) => problem.copy(name = name)}
-    addProblems.withLatestFrom(savedInstances.distinctUntilChanged){case (p,ps) => ps + p}.subscribe(savedInstances.onNext(_))
+    addProblems.withLatestFrom(savedInstances.distinctUntilChanged){case (p,ps) => ps + p}.subscribe(savedInstances.onNext _)
 
     val main = new MainFrame{
       title = "Puzzle 2D"

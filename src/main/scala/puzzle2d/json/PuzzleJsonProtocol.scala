@@ -15,7 +15,7 @@ object PuzzleJsonProtocol extends DefaultJsonProtocol {
     override def write(obj: Shape): JsValue = JsString(obj.toString)
     override def read(json: JsValue): Shape = json match {
       case JsString(desc) => Shape.parseString(desc, '#')
-      case e => throw new DeserializationException(s"expected string, found $e")
+      case e => throw DeserializationException(s"expected string, found $e")
     }
   }
   implicit object JsonPiece extends JsonFormat[Piece] {

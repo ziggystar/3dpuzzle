@@ -1,5 +1,6 @@
 package puzzle3d
 
+import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
 
 object PieceParser extends RegexParsers{
@@ -28,8 +29,8 @@ object PieceParser extends RegexParsers{
     Piece(blocks)
   }
 
-  def solidLine = """[0-9]*""".r
-  def voxelLine = """[#\. ]*""".r
+  def solidLine: Regex = """[0-9]*""".r
+  def voxelLine: Regex = """[#\. ]*""".r
   def solidPiece: PieceParser.Parser[Piece] = "solid" ~ "(" ~> repsep(solidLine,",") <~ ")" ^^ parseSolid
   def voxelPiece: PieceParser.Parser[Piece] = "voxel" ~ "(" ~> repsep(repsep(voxelLine,","),"+") <~ ")" ^^ parseVoxel
   def piece: PieceParser.Parser[Piece] = solidPiece | voxelPiece
