@@ -41,13 +41,13 @@ object Main {
     val savedInstances: Subject[Set[Problem]] = FilePersisted.asJson(instanceFile, Set())
 
     val clearButton = new Button(actClearBoard)
-    val selInstance = new RxChooser[Problem](savedInstances, "Problem Laden")(_.name)
-    val selPieceSet = new RxChooser[PieceSet](Observable.just(pieceSets),"Teile Laden")(_.name)
+    val selInstance = new RxChooser[Problem](savedInstances, "Load Shape")(_.name)
+    val selPieceSet = new RxChooser[PieceSet](Observable.just(pieceSets),"Load Pieces")(_.name)
 
-    val saveButton = new RXButton("Speichern")
+    val saveButton = new RXButton("Save Shape")
     val solveButton = new Button(actionSolve)
     val currentPieceSet: Observable[PieceSet] = selInstance.rxValue.map(_.set) merge selPieceSet.rxValue
-    val exportShape = new RXButton("Export")
+    val exportShape = new RXButton("Export Image")
     val adminSep = Component.wrap(new JToolBar.Separator())
     val toolbar = new ToolBar {
       peer.setFloatable(false)
