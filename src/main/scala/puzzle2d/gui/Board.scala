@@ -1,7 +1,8 @@
 package puzzle2d.gui
 
 import java.awt._
-import java.io.{PrintStream, FileOutputStream, File}
+import java.io.{File, FileOutputStream, PrintStream}
+import java.util.concurrent.atomic.AtomicReference
 
 import org.jfree.graphics2d.svg.SVGGraphics2D
 import org.sat4j.specs.ISolver
@@ -9,13 +10,13 @@ import org.sat4j.tools.xplain.Xplain
 import puzzle2d.Shape
 import puzzle2d._
 import rx.lang.scala.subjects.BehaviorSubject
-import rx.lang.scala.{Subject, Observable}
+import rx.lang.scala.{Observable, Subject}
 import util.rx._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.swing.event._
-import scala.swing.{Dimension, Graphics2D, Component}
+import scala.swing.{Component, Dimension, Graphics2D}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /** A [[scala.swing.Component]] that allows viewing and editing a [[puzzle2d.Shape]].
@@ -81,7 +82,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
   }
 
   val mappedDrags: Observable[Observable[Location]] = leftDrags.map { drag =>
-    val tr = currentTransformation.getValue
+    val tr = currentTransformation.get
     drag.map(me => tr.screenPointToLoc(me.point)).distinct
   }
 
@@ -97,7 +98,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
         Observable.just(Solving(p)) ++ Observable.from(Future(SolveState.attempt(p)))
     }.cache merge problem.map(p => Observable.just(Unattempted(p)))).switch
 
-  val lastSolutionState = solutionState.manifest(Unattempted(Problem.empty))
+  val lastSolutionState: AtomicReference[SolveState] = solutionState.manifest(Unattempted(Problem.empty))
 
   //used for drawing
   boardState.subscribe(_ => this.repaint())
@@ -116,9 +117,9 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
 
     g.addRenderingHints(Map(RenderingHints.KEY_TEXT_ANTIALIASING -> RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_VRGB).asJava)
 
-    val trans = currentTransformation.getValue
+    val trans = currentTransformation.get
 
-    val solveState = lastSolutionState.getValue
+    val solveState = lastSolutionState.get
 
     def drawPiece(s: Shape, transform: Transformation = trans): Unit = {
       import util.Dir._
@@ -146,7 +147,7 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
 
     //draw goal shape
     for{
-      loc <- currentBoardState.getValue.locations
+      loc <- currentBoardState.get.locations
       scrRect = trans.locToScreen(loc) if clip.intersects(scrRect)
     } {
       g.setColor(Color.decode("#7D9AAA"))

@@ -12,10 +12,11 @@ package object rx {
   }
 
   implicit class RichObservable[T](val obs: Observable[T]) extends AnyVal {
-    def manifest(initial: T) = new {
-      private val last = new AtomicReference(initial)
+
+    def manifest(initial: T): AtomicReference[T] = {
+      val last = new AtomicReference(initial)
       obs.subscribe(x => last.set(x))
-      def getValue: T = last.get()
+      last
     }
     def print(msg: String = ""): Unit = obs.subscribe(x => println(s"$msg$x"))
   }
