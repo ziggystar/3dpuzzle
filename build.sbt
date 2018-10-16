@@ -1,6 +1,6 @@
 name := "3dpuzzle"
 
-version := "2.0"
+version := "2.1-DEV"
 
 scalaVersion := "2.12.6"
 
