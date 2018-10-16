@@ -35,8 +35,6 @@ object Main {
   val actionSolve = ActionObs("Solve")
   val actClearBoard = ActionObs("Clear")
 
-  val actionToggleAdmin = ActionObs("AdminToggle")
-
   def main (args: Array[String] ) {
     val savedInstances: Subject[Set[Problem]] = FilePersisted.asJson(instanceFile, Set())
 
@@ -45,17 +43,11 @@ object Main {
     val selPieceSet = new RxChooser[PieceSet](Observable.just(pieceSets),"Load Pieces")(_.name)
 
     val saveButton = new RXButton("Save Shape")
-    val solveButton = new Button(actionSolve)
     val currentPieceSet: Observable[PieceSet] = selInstance.rxValue.map(_.set) merge selPieceSet.rxValue
     val exportShape = new RXButton("Export Image")
-    val adminSep = Component.wrap(new JToolBar.Separator())
     val toolbar = new ToolBar {
       peer.setFloatable(false)
-      contents ++= clearButton :: selInstance :: selPieceSet :: adminSep :: exportShape :: solveButton :: saveButton :: Nil
-    }
-
-    (Observable.just(false) ++ actionToggleAdmin.rxVale.scan(false)((x,_) => !x)).foreach { state =>
-      Seq(adminSep, exportShape, solveButton, saveButton).foreach(_.visible = state)
+      contents ++= clearButton :: selInstance :: selPieceSet :: exportShape :: saveButton :: Nil
     }
 
     val pieces = new PieceSetView(Observable.just(pieceSets.head) ++ currentPieceSet)
@@ -108,16 +100,8 @@ object Main {
     main.open()
 
     //add hotkeys
-    root.peer.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("F1"), "Solve")
-    root.peer.getActionMap.put("Solve", actionSolve.peer)
-    solveButton.tooltip = "F1"
-
-    root.peer.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("F12"), "AdminToggle")
-    root.peer.getActionMap.put("AdminToggle", actionToggleAdmin.peer)
-
     root.peer.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("F2"), "Clear")
     root.peer.getActionMap.put("Clear", actClearBoard.peer)
-    solveButton.tooltip = "F2"
   }
 }
 
