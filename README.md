@@ -1,6 +1,9 @@
 3dpuzzle
 ========
 
+You can [latest release](https://github.com/ziggystar/3dpuzzle/releases/download/v2.0/3dpuzzle-assembly-2.0.jar).
+In order to run the program, you need to install a Java Runtime Environment.
+
 Some Scala code that allows filling arbitrary shapes with predefined pieces using a reduction to SAT.
 
 While the original code for solving 3d puzzles (described further down) still lives within the repository, new code under `puzzle2d` has shifted the focus of the project to solving 2d puzzles. There you can find the following
