@@ -1,7 +1,7 @@
 3dpuzzle
 ========
 
-You can [latest release](https://github.com/ziggystar/3dpuzzle/releases/download/v2.0/3dpuzzle-assembly-2.0.jar).
+You can download the [latest release](https://github.com/ziggystar/3dpuzzle/releases/download/v2.0/3dpuzzle-assembly-2.0.jar).
 In order to run the program, you need to install a Java Runtime Environment.
 
 Some Scala code that allows filling arbitrary shapes with predefined pieces using a reduction to SAT.
