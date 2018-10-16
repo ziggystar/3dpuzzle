@@ -27,29 +27,6 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
             val pieceSet: Observable[PieceSet]) extends Component{
   minimumSize = new Dimension(200,200)
 
-  sealed trait SolveState {
-    def problem: Problem
-  }
-
-  object SolveState {
-    def attempt(p: Problem): SolveState = p.solve(10) match {
-      case s@p.Solution(_,solver) => Solved(p, s, solver)
-      case p.Timeout(s) => TimeOut(p)
-      case p.Unsolvable(s) => Unsolvable(p, s)
-    }
-  }
-
-  case class Unattempted(problem: Problem) extends SolveState
-  case class Solved(problem: Problem, solution: Problem#Solution, solver: ISolver) extends SolveState {
-    def usedPieces: Map[Piece,Int] = {
-      val pieces = problem.set.pieces.keySet
-      val solAsPieces = solution.placement.map(shape => pieces.find(_.represents(shape)).get)
-      solAsPieces.groupBy(identity).mapValues(_.size)
-    }
-  }
-  case class Unsolvable(problem: Problem, solver: ISolver) extends SolveState
-  case class TimeOut(problem: Problem) extends SolveState
-  case class Solving(problem: Problem) extends SolveState
 
   /** The translation describes how to translate the drawn shape on the canvas. */
   case class Transformation(trX: Int, trY: Int, width: Int){
@@ -187,33 +164,45 @@ class Board(val setShape: Observable[Shape] = Observable.empty,
       case _ => None
     }) foreach { solver =>
       g.setColor(Color.decode("#7D9AAA").darker.darker)
-      g.drawString(s"${solver.realNumberOfVariables} variables, ${solver.nConstraints()} clauses", 10, 15)
-
     }
     solveState match {
       case s@Solved(_,solution,solver) =>
         solution.placement.foreach(drawPiece(_))
-        val legendTransform = Transformation(0,0,20)
         s.usedPieces.zipWithIndex.foreach{case ((piece,num),index) =>
           g.setColor(Color.DARK_GRAY)
-          val tr = g.getTransform
-            g.translate(0,30 + index * 4 * legendTransform.width)
-            g.drawString(s"$num:",0,15)
-            g.translate(20,0)
-            drawPiece(piece.representative,legendTransform)
-            g.setTransform(tr)
         }
       case Unsolvable(_,solver) =>
         g.setColor(Color.BLACK)
-        g.drawString("UNSOLVABLE",10,30)
       case Solving(_) =>
         g.setColor(Color.BLACK)
-        g.drawString("SOLVING",10,30)
       case t: TimeOut =>
         g.setColor(Color.BLACK)
-        g.drawString("TIMEOUT",10,30)
       case _ =>
     }
   }
 }
 
+
+sealed trait SolveState {
+  def problem: Problem
+}
+
+object SolveState {
+  def attempt(p: Problem): SolveState = p.solve(10) match {
+    case s@p.Solution(_,solver) => Solved(p, s, solver)
+    case p.Timeout(s) => TimeOut(p)
+    case p.Unsolvable(s) => Unsolvable(p, s)
+  }
+}
+
+case class Unattempted(problem: Problem) extends SolveState
+case class Solved(problem: Problem, solution: Problem#Solution, solver: ISolver) extends SolveState {
+  def usedPieces: Map[Piece,Int] = {
+    val pieces = problem.set.pieces.keySet
+    val solAsPieces = solution.placement.map(shape => pieces.find(_.represents(shape)).get)
+    solAsPieces.groupBy(identity).mapValues(_.size)
+  }
+}
+case class Unsolvable(problem: Problem, solver: ISolver) extends SolveState
+case class TimeOut(problem: Problem) extends SolveState
+case class Solving(problem: Problem) extends SolveState

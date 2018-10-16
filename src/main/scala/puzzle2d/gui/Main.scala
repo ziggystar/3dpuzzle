@@ -11,7 +11,6 @@ import util.rx.FilePersisted
 
 import scala.concurrent.duration.Duration
 import scala.swing._
-
 import puzzle2d.json.PuzzleJsonProtocol._
 
 object Main {
@@ -65,8 +64,16 @@ object Main {
     //auto-solve
     board.problem.distinctUntilChanged.debounce(Duration("1s")).map(_ => ()).subscribe(solveTrigger)
 
+    val solveString = board.solutionState.map{
+      case Solving(p) => "Solving"
+      case TimeOut(p) => "Timeout"
+      case Solved(p, sol, solver) => s"Solved"
+      case Unattempted(problem) => ""
+      case Unsolvable(problem, solver) => "Unsolvable"
+    }
+
     toolbar.contents += Component.wrap(new JToolBar.Separator())
-    toolbar.contents += new RXLabel(board.boardState.map(s => s"Cells: ${s.locations.size}"))
+    toolbar.contents += new RXLabel(solveString)
 
     exportShape.rxValue.foreach{ _ =>
       val fc = new FileChooser()
